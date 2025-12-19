@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Off Book | Actor's Line Learner</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #1a1a1a;
+            --surface: #f4f4f4;
+            --border: #dddddd;
+            --accent: #000000;
+            --button-text: #ffffff;
+            --shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --surface: #1e1e1e;
+            --border: #333333;
+            --accent: #ffffff;
+            --button-text: #000000;
+            --shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        h1 { font-weight: 700; font-size: 1.5rem; letter-spacing: -0.02em; }
+        h2 { font-weight: 600; margin-top: 0; }
+
+        button {
+            background: var(--accent);
+            color: var(--button-text);
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.8; }
+        button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .production-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .role-badge {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--button-text);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 20px 0;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .flashcard-area {
+            text-align: center;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .label { font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 8px; }
+        .line-text { font-size: 1.25rem; font-weight: 500; }
+        .hidden { display: none; }
+
+        .nav-controls { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
+        .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text); padding: 5px 10px; font-size: 0.75rem; }
+
+        .empty-state { text-align: center; color: #888; margin-top: 40px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1 onclick="showHome()" style="cursor:pointer">OFF BOOK</h1>
+        <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+    </header>
+
+    <div id="home-view">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+            <h2>Productions</h2>
+            <button onclick="showNewProduction()">+ Add</button>
+        </div>
+        <div id="production-list"></div>
+    </div>
+
+    <div id="create-view" class="hidden">
+        <h2>New Production</h2>
+        <label>Title</label>
+        <input type="text" id="prod-title" placeholder="e.g. Hamlet">
+        <label>Your Role</label>
+        <input type="text" id="prod-role" placeholder="e.g. Ophelia">
+        <button onclick="saveProduction()">Create Production</button>
+        <button class="secondary" onclick="showHome()">Cancel</button>
+    </div>
+
+    <div id="entry-view" class="hidden">
+        <h2 id="entry-title"></h2>
+        <div id="entry-role" class="role-badge"></div>
+        
+        <div class="card">
+            <h3>Add New Line</h3>
+            <label>The Cue (Last line spoken before yours)</label>
+            <textarea id="line-cue" rows="2"></textarea>
+            <label>Your Line</label>
+            <textarea id="line-text" rows="3"></textarea>
+            <button onclick="addLine()">Add Line</button>
+        </div>
+
+        <div id="current-lines-list"></div>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0;">
+        <button onclick="startPractice(false)">Practice: In Order</button>
+        <button onclick="startPractice(true)">Practice: Random</button>
+        <button class="secondary" onclick="showHome()">Back</button>
+    </div>
+
+    <div id="practice-view" class="hidden">
+        <h2 id="practice-title"></h2>
+        <div id="practice-role" class="role-badge"></div>
+        
+        <div class="card flashcard-area" onclick="revealLine()">
+            <div class="label">The Cue</div>
+            <div id="display-cue" class="line-text"></div>
+            
+            <div id="line-reveal-section" class="hidden" style="margin-top: 30px; border-top: 1px solid var(--border); pt-20">
+                <div class="label" style="margin-top: 20px;">Your Line</div>
+                <div id="display-line" class="line-text"></div>
+            </div>
+
+            <div id="tap-hint" style="margin-top: 40px; font-size: 0.8rem; color: #888;">
+                Tap card to reveal line
+            </div>
+        </div>
+
+        <div class="nav-controls">
+            <button class="secondary" onclick="prevLine()">Previous</button>
+            <button onclick="nextLine()">Next</button>
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="secondary" onclick="showEntryView(currentProdIndex)">Exit Practice</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let productions = JSON.parse(localStorage.getItem('offBookData')) || [];
+    let currentProdIndex = null;
+    let practiceLines = [];
+    let practiceIndex = 0;
+
+    // Initialization
+    function init() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+        renderHome();
+    }
+
+    // Navigation & View Swapping
+    function hideAll() {
+        ['home-view', 'create-view', 'entry-view', 'practice-view'].forEach(id => {
+            document.getElementById(id).classList.add('hidden');
+        });
+    }
+
+    function showHome() {
+        hideAll();
+        document.getElementById('home-view').classList.remove('hidden');
+        renderHome();
+    }
+
+    function showNewProduction() {
+        hideAll();
+        document.getElementById('create-view').classList.remove('hidden');
+    }
+
+    function showEntryView(index) {
+        currentProdIndex = index;
+        const prod = productions[index];
+        hideAll();
+        document.getElementById('entry-view').classList.remove('hidden');
+        document.getElementById('entry-title').innerText = prod.title;
+        document.getElementById('entry-role').innerText = prod.role;
+        renderLines();
+    }
+
+    // Theme Toggle
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    }
+
+    // Data Management
+    function saveProduction() {
+        const title = document.getElementById('prod-title').value;
+        const role = document.getElementById('prod-role').value;
+        if (!title || !role) return alert("Please fill in both fields");
+
+        productions.push({ title, role, lines: [] });
+        syncData();
+        document.getElementById('prod-title').value = '';
+        document.getElementById('prod-role').value = '';
+        showHome();
+    }
+
+    function addLine() {
+        const cue = document.getElementById('line-cue').value;
+        const text = document.getElementById('line-text').value;
+        if (!cue || !text) return alert("Please fill in both fields");
+
+        productions[currentProdIndex].lines.push({ cue, text });
+        syncData();
+        document.getElementById('line-cue').value = '';
+        document.getElementById('line-text').value = '';
+        renderLines();
+    }
+
+    function deleteProduction(e, index) {
+        e.stopPropagation();
+        if(confirm('Delete this production and all lines?')) {
+            productions.splice(index, 1);
+            syncData();
+            renderHome();
+        }
+    }
+
+    function syncData() {
+        localStorage.setItem('offBookData', JSON.stringify(productions));
+    }
+
+    // Rendering
+    function renderHome() {
+        const list = document.getElementById('production-list');
+        if (productions.length === 0) {
+            list.innerHTML = '<div class="empty-state">No productions added yet.</div>';
+            return;
+        }
+        list.innerHTML = productions.map((p, i) => `
+            <div class="production-item" onclick="showEntryView(${i})">
+                <div>
+                    <strong>${p.title}</strong><br>
+                    <small>${p.role} • ${p.lines.length} lines</small>
+                </div>
+                <button class="secondary" onclick="deleteProduction(event, ${i})">Delete</button>
+            </div>
+        `).join('');
+    }
+
+    function renderLines() {
+        const list = document.getElementById('current-lines-list');
+        const lines = productions[currentProdIndex].lines;
+        list.innerHTML = `<h3>Added Lines (${lines.length})</h3>` + 
+            lines.map((l, i) => `
+                <div style="font-size: 0.8rem; margin-bottom: 8px; color: #888;">
+                    Line ${i+1}: "${l.cue.substring(0,20)}..."
+                </div>
+            `).join('');
+    }
+
+    // Practice Logic
+    function startPractice(randomize) {
+        const prod = productions[currentProdIndex];
+        if (prod.lines.length === 0) return alert("Add some lines first!");
+
+        practiceLines = [...prod.lines];
+        if (randomize) {
+            practiceLines.sort(() => Math.random() - 0.5);
+        }
+        
+        practiceIndex = 0;
+        hideAll();
+        document.getElementById('practice-view').classList.remove('hidden');
+        document.getElementById('practice-title').innerText = prod.title;
+        document.getElementById('practice-role').innerText = prod.role;
+        showCurrentFlashcard();
+    }
+
+    function showCurrentFlashcard() {
+        const line = practiceLines[practiceIndex];
+        document.getElementById('display-cue').innerText = line.cue;
+        document.getElementById('display-line').innerText = line.text;
+        document.getElementById('line-reveal-section').classList.add('hidden');
+        document.getElementById('tap-hint').classList.remove('hidden');
+    }
+
+    function revealLine() {
+        document.getElementById('line-reveal-section').classList.remove('hidden');
+        document.getElementById('tap-hint').classList.add('hidden');
+    }
+
+    function nextLine() {
+        if (practiceIndex < practiceLines.length - 1) {
+            practiceIndex++;
+            showCurrentFlashcard();
+        } else {
+            alert("End of lines!");
+        }
+    }
+
+    function prevLine() {
+        if (practiceIndex > 0) {
+            practiceIndex--;
+            showCurrentFlashcard();
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>
