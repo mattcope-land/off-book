@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Guide | Off Book</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+        }
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background-color: #000;
+            color: #fff;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.875rem;
+            margin-right: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 antialiased">
+
+    <div class="max-w-3xl mx-auto px-6 py-12 lg:py-20">
+        <header class="mb-12 border-b border-gray-200 pb-8">
+            <h1 class="text-3xl font-extrabold tracking-tight text-black sm:text-4xl mb-2">OFF BOOK</h1>
+            <p class="text-lg text-gray-600 font-medium">Actor's Line Learner: User Guide</p>
+        </header>
+
+        <main class="space-y-12">
+            
+            <p class="text-gray-700 italic border-l-4 border-gray-300 pl-4">
+                Off Book is a digital rehearsal tool designed to help actors memorize scripts through cue-based flashcards and audio synthesis.
+            </p>
+
+            <!-- Section 1 -->
+            <section>
+                <div class="flex items-center mb-4">
+                    <span class="step-number">1</span>
+                    <h2 class="text-xl font-bold uppercase tracking-wide">Production Setup</h2>
+                </div>
+                <div class="ml-11 text-gray-700">
+                    <p class="mb-3">To begin, you must define the production you are working on.</p>
+                    <ul class="list-disc space-y-2 pl-5">
+                        <li><strong>Create a Production:</strong> From the home screen, click <span class="bg-gray-200 px-1 rounded text-sm font-mono">+ Add</span>.</li>
+                        <li><strong>Details:</strong> Enter the play title and the specific role you are rehearsing.</li>
+                        <li><strong>Management:</strong> You can return to the home screen at any time by clicking the "Off Book" header.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 2 -->
+            <section>
+                <div class="flex items-center mb-4">
+                    <span class="step-number">2</span>
+                    <h2 class="text-xl font-bold uppercase tracking-wide">Building the Script</h2>
+                </div>
+                <div class="ml-11 text-gray-700">
+                    <p class="mb-3">The app uses a "Cue and Response" system to simulate a scene partner.</p>
+                    <ul class="list-disc space-y-2 pl-5">
+                        <li><strong>Adding Lines:</strong> Enter the <strong>Cue</strong> (the line immediately preceding yours) and <strong>Your Line</strong>. Click <strong>Add Line</strong> to save the pair.</li>
+                        <li><strong>Scene Organization:</strong> Use the <strong>Scene Heading</strong> field to create organizational breaks (e.g., "Act 1, Scene 2").</li>
+                        <li><strong>Ordering:</strong> If lines are entered out of sequence, use the <strong>handle (⠿)</strong> to drag and drop them into the correct order.</li>
+                        <li><strong>Bulk Import:</strong> You may use the <strong>Import CSV</strong> feature to upload a spreadsheet of lines. Ensure your CSV has headers for "Cue" and "Line."</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 3 -->
+            <section>
+                <div class="flex items-center mb-4">
+                    <span class="step-number">3</span>
+                    <h2 class="text-xl font-bold uppercase tracking-wide">Practice Modes</h2>
+                </div>
+                <div class="ml-11 text-gray-700">
+                    <p class="mb-3">Once your script is populated, select a rehearsal method from the top navigation:</p>
+                    <ul class="list-disc space-y-2 pl-5">
+                        <li><strong>In Order:</strong> Recommended for early memorization. You can choose to practice the entire script or a specific scene.</li>
+                        <li><strong>Random:</strong> Recommended for advanced mastery to ensure you know your lines regardless of context.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 4 -->
+            <section>
+                <div class="flex items-center mb-4">
+                    <span class="step-number">4</span>
+                    <h2 class="text-xl font-bold uppercase tracking-wide">The Flashcard Interface</h2>
+                </div>
+                <div class="ml-11 text-gray-700">
+                    <ul class="list-disc space-y-2 pl-5">
+                        <li><strong>Prompt:</strong> The "Cue" is displayed first.</li>
+                        <li><strong>Audio:</strong> Click <strong>🔊 Listen</strong> to hear the cue read aloud by the text-to-speech engine.</li>
+                        <li><strong>Verification:</strong> Recite your line, then click the <strong>Cue text</strong> to reveal the correct response and verify your accuracy.</li>
+                        <li><strong>Navigation:</strong> Use the <strong>Next</strong> and <strong>Previous</strong> buttons to move through the script.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 5 -->
+            <section>
+                <div class="flex items-center mb-4">
+                    <span class="step-number">5</span>
+                    <h2 class="text-xl font-bold uppercase tracking-wide">Settings & Customization</h2>
+                </div>
+                <div class="ml-11 text-gray-700">
+                    <p class="mb-3">Access the <strong>⚙️ Settings</strong> menu during practice to optimize your session:</p>
+                    <ul class="list-disc space-y-2 pl-5">
+                        <li><strong>Voice Engine:</strong> Select from available system voices to differentiate the cue's tone.</li>
+                        <li><strong>Playback Speed:</strong> Adjust the "Rate" slider to practice at different performance tempos.</li>
+                        <li><strong>Autoplay:</strong> Enable "Auto-play cue" to have the app automatically speak the next cue as soon as you advance the card.</li>
+                        <li><strong>Interface:</strong> Use the <strong>Toggle Theme</strong> button in the header to switch between light and dark modes.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 6 -->
+            <section class="bg-gray-100 p-6 rounded-lg border border-gray-200">
+                <div class="flex items-center mb-4">
+                    <span class="step-number">6</span>
+                    <h2 class="text-xl font-bold uppercase tracking-wide">Data Policy</h2>
+                </div>
+                <div class="ml-11 text-gray-700 text-sm">
+                    <ul class="list-disc space-y-2 pl-5">
+                        <li>Data is stored <strong>locally in your browser</strong>. There are no accounts or logins.</li>
+                        <li>If you clear browser data, you will lose your saved lines. There is no sync between devices.</li>
+                        <li><strong>Export a CSV backup</strong> frequently to save your work safely outside the browser.</li>
+                        <li>Note: Scene breaks do not currently export to CSV.</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer class="mt-20 pt-8 border-t border-gray-200 text-center text-gray-500 text-xs">
+            <p>&copy; 2025 Off Book | Professional Rehearsal Tools for Modern Theatre</p>
+        </footer>
+    </div>
+
+</body>
+</html>
