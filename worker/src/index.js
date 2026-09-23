@@ -5,6 +5,11 @@
 //
 // The app sends a long script in several requests; `scene` and `context` carry the
 // current scene heading and the end of the previous section across the boundary.
+//
+// POST /speak
+//   headers: X-Passcode
+//   body: { voice, text }
+//   returns: MP3 audio of the text read by that voice
 
 const MAX_IMAGES = 12;
 const MAX_BODY_BYTES = 9_000_000; // Fireworks caps base64 images at 10MB per request
@@ -149,24 +154,78 @@ async function extract(body, env) {
 }
 
 class HttpError extends Error {
-    constructor(status, message) { super(message); this.status = status; }
+    constructor(status, message, code) { super(message); this.status = status; this.code = code; }
+}
+
+// Must match CLOUD_VOICES in index.html
+const VOICES = new Set(['aurora', 'ophelia', 'andromeda', 'luna', 'iris', 'helena', 'pandora',
+    'hermes', 'apollo', 'aries', 'jupiter', 'draco', 'hyperion', 'zeus']);
+const MAX_SPEAK_CHARS = 1500;
+
+async function sha256(text) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function speak(body, env, ctx, ip, headers) {
+    const text = tidy(body.text, MAX_SPEAK_CHARS);
+    if (!text) throw new HttpError(400, 'No text to speak.');
+    if (!VOICES.has(body.voice)) throw new HttpError(400, 'Unknown voice.');
+
+    const audioHeaders = { ...headers, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=31536000' };
+    const key = `${env.TTS_MODEL}:${body.voice}:${await sha256(text)}`;
+    const cached = await env.TTS_CACHE.get(key, 'arrayBuffer');
+    if (cached) return new Response(cached, { headers: audioHeaders });
+
+    if (env.SPEAK_LIMITER && !(await env.SPEAK_LIMITER.limit({ key: ip })).success) {
+        throw new HttpError(429, 'Too many requests. Wait a minute and try again.', 'rate');
+    }
+
+    let audio;
+    try {
+        const out = await env.AI.run(env.TTS_MODEL, { text, speaker: body.voice, encoding: 'mp3' });
+        audio = await new Response(out).arrayBuffer();
+    } catch (e) {
+        console.error('TTS error', e?.message);
+        // On the free plan, Workers AI refuses requests once the daily allowance is used up
+        if (/neuron|allocation|4006|quota|limit/i.test(e?.message || '')) {
+            throw new HttpError(429, "Natural voices have reached today's limit.", 'daily-limit');
+        }
+        throw new HttpError(502, "Couldn't create the voice. Try again.");
+    }
+    if (!audio.byteLength) throw new HttpError(502, "Couldn't create the voice. Try again.");
+
+    // KV writes can fail (e.g. the free plan's daily write limit); the audio is still returned
+    ctx.waitUntil(env.TTS_CACHE.put(key, audio).catch(e => console.error('KV put failed', e?.message)));
+    return new Response(audio, { headers: audioHeaders });
 }
 
 export default {
-    async fetch(request, env) {
+    async fetch(request, env, ctx) {
         const headers = cors(request.headers.get('Origin') || '', env);
         if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
 
         const url = new URL(request.url);
-        if (url.pathname !== '/extract' || request.method !== 'POST') return json({ error: 'Not found' }, 404, headers);
+        if (!['/extract', '/speak'].includes(url.pathname) || request.method !== 'POST') return json({ error: 'Not found' }, 404, headers);
 
         if (!env.PASSCODE || !safeEqual(request.headers.get('X-Passcode') || '', env.PASSCODE)) {
             return json({ error: 'Wrong passcode.' }, 401, headers);
         }
+        const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+
+        if (url.pathname === '/speak') {
+            try {
+                return await speak(await request.json(), env, ctx, ip, headers);
+            } catch (e) {
+                if (e instanceof HttpError) return json({ error: e.message, code: e.code }, e.status, headers);
+                console.error(e);
+                return json({ error: "Couldn't create the voice. Try again." }, 500, headers);
+            }
+        }
 
         if (env.LIMITER) {
-            const { success } = await env.LIMITER.limit({ key: request.headers.get('CF-Connecting-IP') || 'unknown' });
-            if (!success) return json({ error: 'Too many requests. Wait a minute and try again.' }, 429, headers);
+            const { success } = await env.LIMITER.limit({ key: ip });
+            if (!success) return json({ error: 'Too many requests. Wait a minute and try again.', code: 'rate' }, 429, headers);
         }
 
         if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY_BYTES) {

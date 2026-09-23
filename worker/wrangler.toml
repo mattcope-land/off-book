@@ -1,5 +1,6 @@
-# Cloudflare Worker that turns script pages into a character's cue/line pairs.
-# It holds the Fireworks API key so the static site never sees it.
+# Cloudflare Worker behind Learn Lines' online features: turning script pages into a
+# character's cue/line pairs (Fireworks), and reading cues aloud in natural voices
+# (Workers AI). It holds the API key so the static site never sees it.
 #
 # One-time setup (see worker/README.md):
 #   npx wrangler login
@@ -18,12 +19,32 @@ MODEL = "accounts/fireworks/models/kimi-k2p6"
 # "none" turns off the model's thinking: ~3s per request instead of over a minute
 REASONING_EFFORT = "none"
 FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
+# Cloudflare Workers AI text-to-speech model for the natural cue voices
+TTS_MODEL = "@cf/deepgram/aura-2-en"
+
+[ai]
+binding = "AI"
+
+# Generated cue audio, keyed by model + voice + text, so each cue is only paid for once
+[[kv_namespaces]]
+binding = "TTS_CACHE"
+id = "f5d394c307fb40e2a6fa8ae559d3d924"
 
 # Per-IP request limit, on top of the passcode, so a leaked passcode can't run up the bill
+# Script import: each request is several pages
 [[ratelimits]]
 name = "LIMITER"
 namespace_id = "1001"
 
   [ratelimits.simple]
   limit = 20
+  period = 60
+
+# Voices: only cache misses count, and a whole script is downloaded at once
+[[ratelimits]]
+name = "SPEAK_LIMITER"
+namespace_id = "1002"
+
+  [ratelimits.simple]
+  limit = 300
   period = 60

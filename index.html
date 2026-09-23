@@ -355,9 +355,16 @@
             <label>Choose Voice</label>
             <select id="voice-select" onchange="saveVoicePreference()"></select>
 
+            <div id="cloud-voice-settings" class="hidden">
+                <label>Passcode for Natural Voices</label>
+                <input type="password" id="voice-passcode" autocomplete="off" onchange="setPasscode(this.value.trim())">
+                <button class="secondary small" onclick="downloadVoices()">⬇️ Download all cues for offline</button>
+                <div id="voice-download-status" class="hint" style="margin: 6px 0 16px 0;"></div>
+            </div>
+
             <div class="settings-grid">
                 <div><label>Speed</label><input type="range" id="voice-rate" min="0.5" max="2" step="0.1" value="1"></div>
-                <div><label>Pitch</label><input type="range" id="voice-pitch" min="0" max="2" step="0.1" value="1"></div>
+                <div id="pitch-setting"><label>Pitch</label><input type="range" id="voice-pitch" min="0" max="2" step="0.1" value="1"></div>
             </div>
 
             <div class="toggle-container">
@@ -447,8 +454,31 @@
     let lastHeard = '';
     let extracted = [];
 
-    // Cloudflare Worker that extracts lines from a script (see worker/). Empty hides the feature.
-    const EXTRACT_API = 'https://learn-lines-extract.mmcopeland.workers.dev/extract';
+    // Cloudflare Worker for script import and natural voices (see worker/). Empty hides both features.
+    const WORKER = 'https://learn-lines-extract.mmcopeland.workers.dev';
+    const EXTRACT_API = WORKER && WORKER + '/extract';
+    const SPEAK_API = WORKER && WORKER + '/speak';
+
+    // Deepgram Aura-2 voices on Workers AI; must match VOICES in worker/src/index.js
+    const CLOUD_VOICES = [
+        ['aurora', 'Aurora: cheerful, expressive (female)'],
+        ['ophelia', 'Ophelia: enthusiastic, expressive (female)'],
+        ['andromeda', 'Andromeda: casual, expressive (female)'],
+        ['luna', 'Luna: friendly, young (female)'],
+        ['iris', 'Iris: cheerful, young (female)'],
+        ['helena', 'Helena: warm, a little raspy (female)'],
+        ['pandora', 'Pandora: calm, British (female)'],
+        ['hermes', 'Hermes: expressive, engaging (male)'],
+        ['apollo', 'Apollo: confident, casual (male)'],
+        ['aries', 'Aries: warm, energetic (male)'],
+        ['jupiter', 'Jupiter: expressive, deep (male)'],
+        ['draco', 'Draco: warm, deep, British (male)'],
+        ['hyperion', 'Hyperion: warm, Australian (male)'],
+        ['zeus', 'Zeus: deep, smooth (male)']
+    ];
+    const VOICE_CACHE = 'learn-lines-voices';
+    const player = new Audio();
+    let bestDeviceVoice = null;
     const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/';
 
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -471,6 +501,8 @@
 
         loadVoices();
         if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+        // iOS only lets audio play programmatically once the element has played during a tap
+        document.addEventListener('pointerdown', unlockAudio, { once: true });
         renderHome();
 
         // Ask the browser not to evict saved lines when storage runs low
@@ -490,27 +522,68 @@
         updateThemeIcon(next);
     }
 
+    // The passcode for the Worker, shared by script import and natural voices
+    function getPasscode() { return localStorage.getItem('extractPasscode') || ''; }
+    function setPasscode(value) {
+        if (value) localStorage.setItem('extractPasscode', value);
+        else localStorage.removeItem('extractPasscode');
+        document.getElementById('voice-passcode').value = value;
+    }
+
+    // Higher is better. Browsers list their best voices under these names.
+    function voiceQuality(v) {
+        if (/premium/i.test(v.name)) return 5;
+        if (/enhanced|natural|neural/i.test(v.name)) return 4;
+        if (/online/i.test(v.name)) return 3;
+        if (/google/i.test(v.name)) return 2;
+        return v.localService === false ? 1 : 0;
+    }
+
     function loadVoices() {
         voices = synth.getVoices();
-        if (voices.length === 0) return;
+        const lang = (navigator.language || 'en').slice(0, 2).toLowerCase();
+        const ranked = voices.map((v, i) => ({ v, i, q: voiceQuality(v) }));
+        const mine = ranked.filter(x => x.v.lang.toLowerCase().startsWith(lang)).sort((a, b) => b.q - a.q || a.v.name.localeCompare(b.v.name));
+        const others = ranked.filter(x => !mine.includes(x));
+        bestDeviceVoice = (mine[0] || ranked[0])?.v || null;
+
+        const option = x => `<option value="device:${x.i}">${esc(x.v.name)}${x.q >= 4 ? ' ★' : ''}</option>`;
+        let html = SPEAK_API ? `<optgroup label="Natural voices (online, needs passcode)">${CLOUD_VOICES.map(([id, label]) => `<option value="cloud:${id}">${esc(label)}</option>`).join('')}</optgroup>` : '';
+        if (mine.length) html += `<optgroup label="Voices on this device">${mine.map(option).join('')}</optgroup>`;
+        if (others.length) html += `<optgroup label="Other languages">${others.map(option).join('')}</optgroup>`;
 
         const select = document.getElementById('voice-select');
-        select.innerHTML = voices.map((v, i) => `<option value="${i}">${esc(v.name)} (${esc(v.lang)})</option>`).join('');
+        select.innerHTML = html;
 
-        const lastVoiceName = localStorage.getItem('preferredVoice');
-        let defaultIndex = voices.findIndex(v => v.name.includes('Samantha'));
+        // Natural voices need a passcode, so they're only used once chosen; the default is the best device voice
+        const pref = localStorage.getItem('preferredVoice');
+        const saved = voices.findIndex(v => v.name === pref);
+        if (pref && pref.startsWith('cloud:') && SPEAK_API) select.value = pref;
+        else if (saved !== -1) select.value = `device:${saved}`;
+        else select.value = mine.length ? `device:${mine[0].i}` : '';
+        updateVoiceSettings();
+    }
 
-        if (lastVoiceName) {
-            const savedIndex = voices.findIndex(v => v.name === lastVoiceName);
-            if (savedIndex !== -1) defaultIndex = savedIndex;
-        }
-
-        if (defaultIndex !== -1) select.value = defaultIndex;
+    function selectedVoice() {
+        const [type, id] = (document.getElementById('voice-select').value || '').split(':');
+        if (type === 'cloud') return { cloud: id };
+        return { device: voices[id] || bestDeviceVoice };
     }
 
     function saveVoicePreference() {
-        const select = document.getElementById('voice-select');
-        if (voices[select.value]) localStorage.setItem('preferredVoice', voices[select.value].name);
+        const choice = selectedVoice();
+        if (choice.cloud) localStorage.setItem('preferredVoice', `cloud:${choice.cloud}`);
+        else if (choice.device) localStorage.setItem('preferredVoice', choice.device.name);
+        updateVoiceSettings();
+    }
+
+    function updateVoiceSettings() {
+        const cloud = !!selectedVoice().cloud;
+        document.getElementById('cloud-voice-settings').classList.toggle('hidden', !cloud);
+        // Recorded audio can change speed but not pitch
+        document.getElementById('pitch-setting').classList.toggle('hidden', cloud);
+        document.getElementById('voice-passcode').value = getPasscode();
+        document.getElementById('voice-download-status').innerText = '';
     }
 
     function saveAutoplayPreference() {
@@ -897,24 +970,131 @@
     function stopSpeaking() {
         currentUtterance = null;
         synth.cancel();
+        player.onended = null;
+        player.pause();
     }
 
-    function speakCue() {
+    // A tiny silent WAV, played on the first tap so iOS allows later programmatic playback
+    function unlockAudio() {
+        const samples = 800, buf = new ArrayBuffer(44 + samples * 2), v = new DataView(buf);
+        const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+        str(0, 'RIFF'); v.setUint32(4, 36 + samples * 2, true); str(8, 'WAVEfmt ');
+        v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+        str(36, 'data'); v.setUint32(40, samples * 2, true);
+        player.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+        player.play().catch(() => {});
+    }
+
+    async function sha256(text) {
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+        return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Natural-voice audio for a cue: from this device's cache if it's been played or
+    // downloaded before, otherwise from the Worker (which has its own shared cache).
+    async function getCloudAudio(voice, text) {
+        const key = new Request(`https://voice-cache.invalid/${voice}/${await sha256(text)}`);
+        const cache = await caches.open(VOICE_CACHE);
+        const hit = await cache.match(key);
+        if (hit) return hit.blob();
+
+        const res = await fetch(SPEAK_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Passcode': getPasscode() },
+            body: JSON.stringify({ voice, text })
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const err = new Error(data.error || `Request failed (${res.status})`);
+            err.status = res.status;
+            err.code = data.code;
+            throw err;
+        }
+        const blob = await res.blob();
+        await cache.put(key, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg' } }));
+        return blob;
+    }
+
+    function voiceError(e) {
+        if (e.status === 401) return 'Wrong passcode for natural voices. Check ⚙️ Settings.';
+        if (e.code === 'daily-limit') return "Natural voices have reached today's limit. Cues you've already heard still work.";
+        if (e.status) return e.message;
+        return "You're offline. Download cues in ⚙️ Settings to use natural voices offline.";
+    }
+
+    async function speakCue() {
         stopSpeaking();
         stopListening();
         const listenAfter = SpeechRec && document.getElementById('listen-after-cue-toggle').checked;
         const cue = practiceLines[practiceIndex].cue;
         if (!cue) { if (listenAfter) startListening(); return; }
 
+        // Stopping speech clears this token, so a cue that finishes (or finishes loading) late is ignored
+        const token = {};
+        currentUtterance = token;
+        const done = () => { if (currentUtterance === token && listenAfter) startListening(); };
+        const rate = Number(document.getElementById('voice-rate').value);
+        const choice = selectedVoice();
+
+        if (choice.cloud) {
+            try {
+                const blob = await getCloudAudio(choice.cloud, cue);
+                if (currentUtterance !== token) return;
+                if (player.src.startsWith('blob:')) URL.revokeObjectURL(player.src);
+                player.src = URL.createObjectURL(blob);
+                player.playbackRate = rate;
+                player.onended = done;
+                await player.play();
+                document.getElementById('heard-text').innerText = '';
+                return;
+            } catch (e) {
+                if (currentUtterance !== token) return;
+                if (e.status === 401) setPasscode('');
+                document.getElementById('heard-text').innerText = e.name === 'NotAllowedError'
+                    ? 'Tap 🔊 Listen to hear the cue.'
+                    : `${voiceError(e)} Using the device voice for now.`;
+                if (e.name === 'NotAllowedError') return;
+            }
+        }
+
         const utterance = new SpeechSynthesisUtterance(cue);
-        const selected = document.getElementById('voice-select').value;
-        if (voices[selected]) utterance.voice = voices[selected];
-        utterance.rate = document.getElementById('voice-rate').value;
-        utterance.pitch = document.getElementById('voice-pitch').value;
-        // Some browsers fire onend on cancel, so only react if this is still the current cue
-        utterance.onend = () => { if (currentUtterance === utterance && listenAfter) startListening(); };
-        currentUtterance = utterance;
+        const voice = choice.device || bestDeviceVoice;
+        if (voice) utterance.voice = voice;
+        utterance.rate = rate;
+        utterance.pitch = choice.device ? document.getElementById('voice-pitch').value : 1;
+        utterance.onend = done;
         synth.speak(utterance);
+    }
+
+    // Fetches every cue in the production so practice works offline and without waiting
+    async function downloadVoices() {
+        const voice = selectedVoice().cloud;
+        const status = document.getElementById('voice-download-status');
+        if (!voice) return;
+        if (!getPasscode()) { status.innerText = 'Enter the passcode first.'; return; }
+        const cues = [...new Set(productions[currentProdIndex].lines.filter(l => l.type === 'line' && l.cue).map(l => l.cue))];
+        if (!cues.length) { status.innerText = 'No cues to download.'; return; }
+
+        let next = 0, done = 0, failure = null;
+        status.innerText = `Downloading… 0 of ${cues.length}`;
+        await Promise.all(Array.from({ length: 4 }, async () => {
+            while (next < cues.length && !failure) {
+                const cue = cues[next++];
+                try { await getCloudAudio(voice, cue); }
+                catch (e) {
+                    // Brief rate limits just mean waiting; anything else stops the download
+                    if (e.code === 'rate') { next--; await new Promise(r => setTimeout(r, 10000)); continue; }
+                    failure = e;
+                    break;
+                }
+                status.innerText = `Downloading… ${++done} of ${cues.length}`;
+            }
+        }));
+        if (failure?.status === 401) setPasscode('');
+        status.innerText = failure
+            ? `${voiceError(failure)} ${done} of ${cues.length} cues downloaded; try again to get the rest.`
+            : `All ${cues.length} cues are ready, including offline.`;
     }
 
     // --- Speech check: listen to the actor and compare against the script ---
@@ -1138,7 +1318,7 @@
         hideAll();
         document.getElementById('script-import-view').classList.remove('hidden');
         document.getElementById('ai-character').value = productions[currentProdIndex].role;
-        document.getElementById('ai-passcode').value = localStorage.getItem('extractPasscode') || '';
+        document.getElementById('ai-passcode').value = getPasscode();
         document.getElementById('ai-status').innerText = '';
         document.getElementById('ai-review').classList.add('hidden');
         extracted = [];
@@ -1272,7 +1452,7 @@
                 }
             }));
 
-            localStorage.setItem('extractPasscode', passcode);
+            setPasscode(passcode);
             // A section that starts mid-scene comes back without a heading; carry the previous one forward
             let scene = '';
             extracted = results.flat().map(l => { scene = l.scene || scene; return { ...l, scene }; });
@@ -1280,7 +1460,7 @@
             status(`Found ${extracted.length} line${extracted.length === 1 ? '' : 's'}.` + (truncated ? ' Some sections were too long and may be missing lines at the end; try fewer pages at a time.' : ''));
             renderExtracted();
         } catch (e) {
-            if (e.status === 401) localStorage.removeItem('extractPasscode');
+            if (e.status === 401) setPasscode('');
             status(e.message || 'Something went wrong. Try again.');
         } finally {
             btn.disabled = false;

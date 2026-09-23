@@ -19,7 +19,8 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys()
-            .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+            // Only old app caches: the page keeps downloaded cue audio in its own cache
+            .then(keys => Promise.all(keys.filter(k => /^learn-lines-v\d+$/.test(k) && k !== CACHE).map(k => caches.delete(k))))
             .then(() => self.clients.claim())
     );
 });
