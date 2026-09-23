@@ -50,4 +50,4 @@ Access the **⚙️ Settings** menu during practice to optimize your session:
 * There is no sync between devices.  
 * So **export a CSV backup** and save it somewhere safe once you have your lines the way you like them.  
 * You can always re-import lines from a CSV if you accidentally clear browser data or want to add them to a different device.  
-* At this point the **scene breaks do not export**. I’ll try to fix this in a future update.
+* CSV exports include scene breaks (an optional third **Scene** column).

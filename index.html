@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learn Lines | Actor's Line Learner</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Learn Lines">
     <style>
         :root {
             --bg: #ffffff;
@@ -13,6 +20,8 @@
             --accent: #000000;
             --button-text: #ffffff;
             --shadow: 0 2px 5px rgba(0,0,0,0.1);
+            --good: #1a7f37;
+            --miss: #d1242f;
         }
 
         [data-theme="dark"] {
@@ -23,6 +32,8 @@
             --accent: #ffffff;
             --button-text: #000000;
             --shadow: 0 4px 10px rgba(0,0,0,0.3);
+            --good: #4ac26b;
+            --miss: #ff6b6b;
         }
 
         body {
@@ -66,9 +77,10 @@
 
         button:hover { opacity: 0.8; }
         button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
-        button.audio-btn { padding: 8px 16px; font-size: 0.8rem; margin-top: 10px; border-radius: 20px; }
+        button.audio-btn { padding: 8px 16px; font-size: 0.8rem; border-radius: 20px; }
         button.small { padding: 5px 10px; font-size: 0.75rem; }
         button.delete-line { background: none; color: #ff4444; font-size: 1.2rem; padding: 0 5px; }
+        button.listening { background: var(--miss); color: #fff; border-color: var(--miss); }
 
         .top-nav {
             display: flex;
@@ -135,14 +147,19 @@
             border-radius: 4px;
             box-sizing: border-box;
             font-size: 1rem;
+            font-family: inherit;
         }
 
         .line-item { display: flex; align-items: center; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 0; gap: 10px; }
         .line-item.scene-break { background: var(--border); border-radius: 4px; margin: 15px 0 5px 0; padding: 5px 10px; }
         .line-item.dragging { opacity: 0.5; }
-        .handle { cursor: grab; color: #888; font-size: 1.2rem; padding: 0 5px; }
-        .line-content { flex-grow: 1; font-size: 0.85rem; color: #888; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .line-item.editing { display: block; padding: 12px; }
+        .handle { cursor: grab; color: #888; font-size: 1.2rem; padding: 4px 8px; touch-action: none; user-select: none; -webkit-user-select: none; }
+        .line-content { flex-grow: 1; min-width: 0; font-size: 0.85rem; cursor: pointer; }
+        .line-content > div { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .line-content .cue-preview { color: #888; }
         .line-content.break-text { color: var(--text); font-weight: 700; text-transform: uppercase; font-size: 0.75rem; }
+        .edit-actions { display: flex; gap: 10px; }
 
         .modal {
             position: fixed;
@@ -174,7 +191,15 @@
 
         .label { font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 8px; }
         .line-text { font-size: 1.25rem; font-weight: 500; }
+        .hint { font-size: 0.75rem; color: #888; margin-top: 6px; }
         .hidden { display: none !important; }
+
+        .card-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
+        .heard { font-size: 0.85rem; color: #888; font-style: italic; margin-top: 12px; min-height: 1.2em; }
+        .check-result { font-weight: 700; margin-top: 12px; }
+        .check-result.good { color: var(--good); }
+        .check-result.miss { color: var(--miss); }
+        .word-missed { color: var(--miss); text-decoration: underline wavy; text-underline-offset: 4px; }
 
         .settings-tray {
             background: var(--surface);
@@ -192,7 +217,7 @@
 
         .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
         #csv-import-input { display: none; }
-        
+
         .toggle-container {
             display: flex;
             align-items: center;
@@ -241,17 +266,17 @@
 
         <h2 id="entry-title"></h2>
         <div id="entry-role" class="role-badge"></div>
-        
+
         <div class="card">
             <h3>Add to Script</h3>
             <div id="line-inputs">
                 <label>The Cue</label>
-                <textarea id="line-cue" rows="2" placeholder="The line before yours..."></textarea>
+                <textarea id="line-cue" rows="2" placeholder="The line before yours (leave blank if you speak first)"></textarea>
                 <label>Your Line</label>
                 <textarea id="line-text" rows="3" placeholder="Your spoken line..."></textarea>
                 <button onclick="addLine()">Add Line</button>
             </div>
-            
+
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
                 <label>Scene Heading</label>
                 <div style="display: flex; gap: 10px;">
@@ -263,7 +288,7 @@
             <div class="action-row" style="margin-top: 20px;">
                 <button class="secondary small" onclick="exportToCSV()">📤 Export CSV</button>
                 <button class="secondary small" onclick="document.getElementById('csv-import-input').click()">📥 Import CSV</button>
-                <input type="file" id="csv-import-input" accept=".csv" onchange="importFromCSV(event)">
+                <input type="file" id="csv-import-input" accept=".csv,text/csv" onchange="importFromCSV(event)">
             </div>
         </div>
 
@@ -283,7 +308,7 @@
         <div id="settings-tray" class="settings-tray hidden">
             <label>Choose Voice</label>
             <select id="voice-select" onchange="saveVoicePreference()"></select>
-            
+
             <div class="settings-grid">
                 <div><label>Speed</label><input type="range" id="voice-rate" min="0.5" max="2" step="0.1" value="1"></div>
                 <div><label>Pitch</label><input type="range" id="voice-pitch" min="0" max="2" step="0.1" value="1"></div>
@@ -293,19 +318,30 @@
                 <input type="checkbox" id="autoplay-toggle" onchange="saveAutoplayPreference()">
                 <label for="autoplay-toggle">Auto-play cue on new card</label>
             </div>
+            <div class="toggle-container speech-only">
+                <input type="checkbox" id="listen-after-cue-toggle" onchange="saveListenAfterCuePreference()">
+                <label for="listen-after-cue-toggle">Listen for my line after the cue plays</label>
+            </div>
         </div>
-        
+
         <div class="card flashcard-area">
             <div onclick="revealLine()" style="cursor:pointer; width: 100%;">
                 <div class="label">The Cue</div>
                 <div id="display-cue" class="line-text"></div>
+                <div id="reveal-hint" class="hint">Say your line, then tap to check</div>
             </div>
-            
-            <button class="secondary audio-btn" onclick="speakCue()">🔊 Listen</button>
 
-            <div id="line-reveal-section" class="hidden" style="margin-top: 30px; border-top: 1px solid var(--border); width: 100%; padding-top: 20px;">
+            <div class="card-actions">
+                <button class="secondary audio-btn" onclick="speakCue()">🔊 Listen</button>
+                <button id="mic-btn" class="secondary audio-btn speech-only" onclick="toggleListening()">🎤 Say It</button>
+                <button class="secondary audio-btn" onclick="revealLine()">👁 Show Line</button>
+            </div>
+            <div id="heard-text" class="heard"></div>
+
+            <div id="line-reveal-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border); width: 100%; padding-top: 20px;">
                 <div class="label">Your Line</div>
                 <div id="display-line" class="line-text"></div>
+                <div id="check-result" class="check-result"></div>
             </div>
         </div>
 
@@ -337,7 +373,14 @@
     let practiceLines = [];
     let practiceIndex = 0;
     let voices = [];
+    let editingIndex = null;
     const synth = window.speechSynthesis;
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let currentUtterance = null;
+    let recognition = null;
+    let lastHeard = '';
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     function init() {
         // Theme init
@@ -349,13 +392,18 @@
             document.documentElement.setAttribute('data-theme', 'dark');
             updateThemeIcon('dark');
         }
-        
-        const autoPlay = localStorage.getItem('autoPlayCue') === 'true';
-        document.getElementById('autoplay-toggle').checked = autoPlay;
+
+        document.getElementById('autoplay-toggle').checked = localStorage.getItem('autoPlayCue') === 'true';
+        document.getElementById('listen-after-cue-toggle').checked = localStorage.getItem('listenAfterCue') === 'true';
+        if (!SpeechRec) document.querySelectorAll('.speech-only').forEach(el => el.classList.add('hidden'));
 
         loadVoices();
         if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
         renderHome();
+
+        // Ask the browser not to evict saved lines when storage runs low
+        if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
     }
 
     function updateThemeIcon(theme) {
@@ -375,11 +423,11 @@
         if (voices.length === 0) return;
 
         const select = document.getElementById('voice-select');
-        select.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join('');
+        select.innerHTML = voices.map((v, i) => `<option value="${i}">${esc(v.name)} (${esc(v.lang)})</option>`).join('');
 
         const lastVoiceName = localStorage.getItem('preferredVoice');
         let defaultIndex = voices.findIndex(v => v.name.includes('Samantha'));
-        
+
         if (lastVoiceName) {
             const savedIndex = voices.findIndex(v => v.name === lastVoiceName);
             if (savedIndex !== -1) defaultIndex = savedIndex;
@@ -397,17 +445,23 @@
         localStorage.setItem('autoPlayCue', document.getElementById('autoplay-toggle').checked);
     }
 
+    function saveListenAfterCuePreference() {
+        localStorage.setItem('listenAfterCue', document.getElementById('listen-after-cue-toggle').checked);
+    }
+
     function toggleSettings() { document.getElementById('settings-tray').classList.toggle('hidden'); }
-    function hideAll() { 
-        ['home-view', 'create-view', 'entry-view', 'practice-view', 'scene-modal'].forEach(id => document.getElementById(id).classList.add('hidden')); 
-        synth.cancel(); 
+    function hideAll() {
+        ['home-view', 'create-view', 'entry-view', 'practice-view', 'scene-modal'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        stopSpeaking();
+        stopListening();
     }
     function closeModal() { document.getElementById('scene-modal').classList.add('hidden'); }
     function showHome() { hideAll(); document.getElementById('home-view').classList.remove('hidden'); renderHome(); }
     function showNewProduction() { hideAll(); document.getElementById('create-view').classList.remove('hidden'); }
-    
+
     function showEntryView(index) {
         currentProdIndex = index;
+        editingIndex = null;
         hideAll();
         document.getElementById('entry-view').classList.remove('hidden');
         document.getElementById('entry-title').innerText = productions[index].title;
@@ -421,13 +475,15 @@
         if (!title || !role) return;
         productions.push({ title, role, lines: [] });
         syncData();
+        document.getElementById('prod-title').value = '';
+        document.getElementById('prod-role').value = '';
         showHome();
     }
 
     function addLine() {
-        const cue = document.getElementById('line-cue').value;
-        const text = document.getElementById('line-text').value;
-        if (!cue || !text) return;
+        const cue = document.getElementById('line-cue').value.trim();
+        const text = document.getElementById('line-text').value.trim();
+        if (!text) return;
         productions[currentProdIndex].lines.push({ type: 'line', cue, text });
         syncData();
         document.getElementById('line-cue').value = '';
@@ -436,7 +492,7 @@
     }
 
     function addSceneBreak() {
-        const name = document.getElementById('scene-name').value;
+        const name = document.getElementById('scene-name').value.trim();
         if (!name) return;
         productions[currentProdIndex].lines.push({ type: 'break', text: name });
         syncData();
@@ -450,7 +506,7 @@
         const list = document.getElementById('production-list');
         list.innerHTML = productions.length ? productions.map((p, i) => `
             <div class="production-item" onclick="showEntryView(${i})">
-                <div><strong>${p.title}</strong><br><small>${p.role} • ${p.lines.filter(l=>l.type==='line').length} lines</small></div>
+                <div><strong>${esc(p.title)}</strong><br><small>${esc(p.role)} • ${p.lines.filter(l=>l.type==='line').length} lines</small></div>
                 <button class="secondary" onclick="event.stopPropagation(); if(confirm('Delete?')){productions.splice(${i},1); syncData(); renderHome();}">Delete</button>
             </div>`).join('') : '<div class="empty-state">No productions.</div>';
     }
@@ -464,26 +520,95 @@
         productions[currentProdIndex].lines.forEach((l, i) => {
             const item = document.createElement('div');
             item.className = `line-item ${l.type === 'break' ? 'scene-break' : ''}`;
-            item.draggable = true;
             item.dataset.index = i;
-            if (l.type === 'break') {
-                item.innerHTML = `<div class="handle">⠿</div><div class="line-content break-text">🎬 ${l.text}</div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
-            } else {
-                item.innerHTML = `<div class="handle">⠿</div><div class="line-content">Cue: "${l.cue}"</div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
+
+            if (i === editingIndex) {
+                item.classList.add('editing');
+                const fields = l.type === 'break'
+                    ? `<label>Scene Heading</label><input type="text" id="edit-scene" value="${esc(l.text)}">`
+                    : `<label>The Cue</label><textarea id="edit-cue" rows="2">${esc(l.cue)}</textarea>
+                       <label>Your Line</label><textarea id="edit-text" rows="3">${esc(l.text)}</textarea>`;
+                item.innerHTML = `${fields}<div class="edit-actions"><button onclick="saveEdit(${i})">Save</button><button class="secondary" onclick="cancelEdit()">Cancel</button></div>`;
+                container.appendChild(item);
+                return;
             }
-            item.addEventListener('dragstart', () => item.classList.add('dragging'));
-            item.addEventListener('dragend', () => { item.classList.remove('dragging'); saveNewOrder(); });
+
+            if (l.type === 'break') {
+                item.innerHTML = `<div class="handle">⠿</div><div class="line-content break-text" onclick="editItem(${i})">🎬 ${esc(l.text)}</div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
+            } else {
+                item.innerHTML = `<div class="handle">⠿</div><div class="line-content" onclick="editItem(${i})" title="Tap to edit"><div class="cue-preview">Cue: "${esc(l.cue || '(you start)')}"</div><div>${esc(l.text)}</div></div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
+            }
+            const handle = item.querySelector('.handle');
+            handle.addEventListener('pointerdown', e => startDrag(e, item, container));
             container.appendChild(item);
         });
 
-        container.addEventListener('dragover', e => {
-            e.preventDefault();
-            const afterElement = getDragAfterElement(container, e.clientY);
-            const dragging = document.querySelector('.dragging');
-            if (afterElement == null) container.appendChild(dragging);
-            else container.insertBefore(dragging, afterElement);
-        });
         list.appendChild(container);
+    }
+
+    function editItem(index) {
+        editingIndex = index;
+        renderLines();
+        const field = document.getElementById('edit-text') || document.getElementById('edit-scene');
+        if (field) field.focus();
+    }
+
+    function cancelEdit() { editingIndex = null; renderLines(); }
+
+    function saveEdit(index) {
+        const l = productions[currentProdIndex].lines[index];
+        if (l.type === 'break') {
+            const name = document.getElementById('edit-scene').value.trim();
+            if (!name) return;
+            l.text = name;
+        } else {
+            const text = document.getElementById('edit-text').value.trim();
+            if (!text) return;
+            l.cue = document.getElementById('edit-cue').value.trim();
+            l.text = text;
+        }
+        editingIndex = null;
+        syncData(); renderLines();
+    }
+
+    // Pointer events (not HTML5 drag-and-drop) so reordering works with touch as well as a mouse
+    function startDrag(e, item, container) {
+        if (editingIndex !== null) return;
+        e.preventDefault();
+        const handle = e.currentTarget;
+        handle.setPointerCapture(e.pointerId);
+        item.classList.add('dragging');
+
+        const move = ev => {
+            moveBefore(container, item, getDragAfterElement(container, ev.clientY));
+            if (ev.clientY < 60) window.scrollBy(0, -12);
+            else if (ev.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
+        };
+        const end = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', end);
+            handle.removeEventListener('pointercancel', end);
+            item.classList.remove('dragging');
+            saveNewOrder();
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', end);
+        handle.addEventListener('pointercancel', end);
+    }
+
+    // Moves the siblings around `item` rather than `item` itself: detaching the
+    // dragged element from the DOM would release its pointer capture mid-drag.
+    function moveBefore(container, item, after) {
+        if (after === item) return;
+        const kids = [...container.children];
+        const from = kids.indexOf(item);
+        const to = after ? kids.indexOf(after) : kids.length;
+        if (to > from) {
+            for (let k = from + 1; k < to; k++) container.insertBefore(kids[k], item);
+        } else {
+            const ref = item.nextSibling;
+            for (let k = to; k < from; k++) container.insertBefore(kids[k], ref);
+        }
     }
 
     function getDragAfterElement(container, y) {
@@ -503,38 +628,42 @@
     }
 
     function deleteItem(index) {
-        if (confirm("Remove?")) { productions[currentProdIndex].lines.splice(index, 1); syncData(); renderLines(); }
+        if (confirm("Remove?")) { productions[currentProdIndex].lines.splice(index, 1); editingIndex = null; syncData(); renderLines(); }
     }
 
     function handlePracticeInOrder() {
         const allLines = productions[currentProdIndex].lines;
-        const sceneBreaks = allLines.filter(l => l.type === 'break');
-        if (sceneBreaks.length > 0) {
+        if (allLines.some(l => l.type === 'break')) {
             const dropdown = document.getElementById('scene-select-dropdown');
-            dropdown.innerHTML = sceneBreaks.map(s => `<option value="${s.text}">${s.text}</option>`).join('');
+            dropdown.innerHTML = allLines.map((l, i) => l.type === 'break' ? `<option value="${i}">${esc(l.text)}</option>` : '').join('');
             document.getElementById('scene-modal').classList.remove('hidden');
         } else startPractice(false);
     }
 
     function startPracticeWithScene() {
-        startPractice(false, document.getElementById('scene-select-dropdown').value);
+        startPractice(false, Number(document.getElementById('scene-select-dropdown').value));
     }
 
-    function startPractice(randomize, filteredScene = null) {
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    // sceneStart is the index of a scene break; practice runs from it to the next break
+    function startPractice(randomize, sceneStart = null) {
         const allLines = productions[currentProdIndex].lines;
         let lineSet = [];
-        if (filteredScene) {
-            let capturing = false;
-            for (let l of allLines) {
-                if (l.type === 'break' && l.text === filteredScene) { capturing = true; lineSet.push(l); continue; }
-                if (l.type === 'break' && capturing) break;
-                if (capturing) lineSet.push(l);
-            }
+        if (sceneStart !== null) {
+            lineSet.push(allLines[sceneStart]);
+            for (let i = sceneStart + 1; i < allLines.length && allLines[i].type !== 'break'; i++) lineSet.push(allLines[i]);
         } else lineSet = [...allLines];
 
         const linesOnly = lineSet.filter(l => l.type === 'line');
         if (!linesOnly.length) return alert("No lines found.");
-        practiceLines = randomize ? [...linesOnly].sort(() => Math.random() - 0.5) : [...lineSet];
+        practiceLines = randomize ? shuffle([...linesOnly]) : [...lineSet];
         practiceIndex = 0;
         while(practiceIndex < practiceLines.length && practiceLines[practiceIndex].type === 'break') practiceIndex++;
         hideAll();
@@ -545,23 +674,30 @@
     }
 
     function showCurrentFlashcard() {
-        synth.cancel();
+        stopSpeaking();
+        stopListening();
         const current = practiceLines[practiceIndex];
         const sceneDisplay = document.getElementById('current-scene-display');
         let currentScene = "";
         for (let i = 0; i <= practiceIndex; i++) if (practiceLines[i].type === 'break') currentScene = practiceLines[i].text;
-        
+
         if (currentScene) { sceneDisplay.innerText = currentScene; sceneDisplay.classList.remove('hidden'); }
         else sceneDisplay.classList.add('hidden');
 
-        document.getElementById('display-cue').innerText = current.cue;
+        document.getElementById('display-cue').innerText = current.cue || '(You speak first)';
         document.getElementById('display-line').innerText = current.text;
         document.getElementById('line-reveal-section').classList.add('hidden');
+        document.getElementById('reveal-hint').classList.remove('hidden');
+        document.getElementById('heard-text').innerText = '';
+        setCheckResult('', '');
 
         if (document.getElementById('autoplay-toggle').checked) speakCue();
     }
 
-    function revealLine() { document.getElementById('line-reveal-section').classList.remove('hidden'); }
+    function revealLine() {
+        document.getElementById('line-reveal-section').classList.remove('hidden');
+        document.getElementById('reveal-hint').classList.add('hidden');
+    }
 
     function nextLine() {
         let i = practiceIndex + 1;
@@ -576,36 +712,230 @@
         if (i >= 0) { practiceIndex = i; showCurrentFlashcard(); }
     }
 
-    function speakCue() {
+    function stopSpeaking() {
+        currentUtterance = null;
         synth.cancel();
-        const utterance = new SpeechSynthesisUtterance(practiceLines[practiceIndex].cue);
+    }
+
+    function speakCue() {
+        stopSpeaking();
+        stopListening();
+        const listenAfter = SpeechRec && document.getElementById('listen-after-cue-toggle').checked;
+        const cue = practiceLines[practiceIndex].cue;
+        if (!cue) { if (listenAfter) startListening(); return; }
+
+        const utterance = new SpeechSynthesisUtterance(cue);
         const selected = document.getElementById('voice-select').value;
         if (voices[selected]) utterance.voice = voices[selected];
         utterance.rate = document.getElementById('voice-rate').value;
         utterance.pitch = document.getElementById('voice-pitch').value;
+        // Some browsers fire onend on cancel, so only react if this is still the current cue
+        utterance.onend = () => { if (currentUtterance === utterance && listenAfter) startListening(); };
+        currentUtterance = utterance;
         synth.speak(utterance);
     }
 
+    // --- Speech check: listen to the actor and compare against the script ---
+
+    const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+        'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+
+    function normalizeWord(w) {
+        w = w.toLowerCase().replace(/[’']/g, '').replace(/[^\p{L}\p{N}]/gu, '');
+        return NUMBER_WORDS[Number(w)] && /^\d+$/.test(w) ? NUMBER_WORDS[Number(w)] : w;
+    }
+
+    const splitWords = s => s.split(/[\s\-–—]+/).map(normalizeWord).filter(Boolean);
+
+    function editDistance(a, b) {
+        const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+        for (let j = 1; j <= b.length; j++) d[0][j] = j;
+        for (let i = 1; i <= a.length; i++)
+            for (let j = 1; j <= b.length; j++)
+                d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+        return d[a.length][b.length];
+    }
+
+    // Recognizers often mis-hear a letter or two in longer words, so allow one edit there
+    const wordsMatch = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && editDistance(a, b) <= 1);
+
+    // Aligns heard words to the script (longest common subsequence) and reports,
+    // for each whitespace-separated word of the script, whether it was said.
+    function checkLine(expected, heard) {
+        const tokens = expected.split(/\s+/).filter(Boolean).map(t => ({ display: t, words: splitWords(t) }));
+        const exp = [];
+        tokens.forEach((t, ti) => t.words.forEach(w => exp.push({ w, ti })));
+        const got = splitWords(heard);
+
+        const n = exp.length, m = got.length;
+        const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+        for (let i = n - 1; i >= 0; i--)
+            for (let j = m - 1; j >= 0; j--)
+                L[i][j] = wordsMatch(exp[i].w, got[j]) ? L[i+1][j+1] + 1 : Math.max(L[i+1][j], L[i][j+1]);
+
+        const matched = new Array(n).fill(false);
+        for (let i = 0, j = 0; i < n && j < m; ) {
+            if (wordsMatch(exp[i].w, got[j]) && L[i][j] === L[i+1][j+1] + 1) { matched[i] = true; i++; j++; }
+            else if (L[i+1][j] >= L[i][j+1]) i++;
+            else j++;
+        }
+
+        const tokenMissed = tokens.map(() => false);
+        exp.forEach((e, i) => { if (!matched[i]) tokenMissed[e.ti] = true; });
+        const hits = matched.filter(Boolean).length;
+        return {
+            tokens: tokens.map((t, i) => ({ display: t.display, missed: tokenMissed[i] })),
+            total: n,
+            hits,
+            complete: n > 0 && hits === n
+        };
+    }
+
+    function setCheckResult(text, kind) {
+        const el = document.getElementById('check-result');
+        el.innerText = text;
+        el.className = `check-result ${kind}`;
+    }
+
+    function setMicButton(listening) {
+        const btn = document.getElementById('mic-btn');
+        btn.classList.toggle('listening', listening);
+        btn.innerText = listening ? '⏹ Done' : '🎤 Say It';
+    }
+
+    function toggleListening() {
+        if (recognition) recognition.stop();
+        else startListening();
+    }
+
+    function startListening() {
+        if (!SpeechRec) return;
+        stopSpeaking();
+        stopListening();
+
+        const expected = practiceLines[practiceIndex].text;
+        const heardEl = document.getElementById('heard-text');
+        const rec = new SpeechRec();
+        rec.lang = navigator.language || 'en-US';
+        rec.continuous = true;
+        rec.interimResults = true;
+        lastHeard = '';
+
+        rec.onresult = e => {
+            lastHeard = [...e.results].map(r => r[0].transcript).join(' ');
+            heardEl.innerText = `“${lastHeard.trim()}”`;
+            if (checkLine(expected, lastHeard).complete) rec.stop();
+        };
+        rec.onerror = e => {
+            if (e.error === 'not-allowed' || e.error === 'service-not-allowed') heardEl.innerText = 'Microphone access is blocked. Allow it in your browser settings to use 🎤.';
+            else if (e.error === 'no-speech') heardEl.innerText = "Didn't hear anything. Tap 🎤 to try again.";
+        };
+        rec.onend = () => {
+            if (recognition !== rec) return;
+            recognition = null;
+            setMicButton(false);
+            if (lastHeard.trim()) showCheck(expected, lastHeard);
+            else if (heardEl.innerText === 'Listening…') heardEl.innerText = "Didn't hear anything. Tap 🎤 to try again.";
+        };
+
+        recognition = rec;
+        setMicButton(true);
+        heardEl.innerText = 'Listening…';
+        try { rec.start(); }
+        catch { recognition = null; setMicButton(false); heardEl.innerText = "Couldn't start the microphone. Try again."; }
+    }
+
+    function stopListening() {
+        if (!recognition) return;
+        const rec = recognition;
+        recognition = null;
+        rec.abort();
+        setMicButton(false);
+    }
+
+    function showCheck(expected, heard) {
+        const result = checkLine(expected, heard);
+        document.getElementById('display-line').innerHTML = result.tokens
+            .map(t => t.missed ? `<span class="word-missed">${esc(t.display)}</span>` : esc(t.display)).join(' ');
+        const missed = result.total - result.hits;
+        if (result.complete) setCheckResult('🎉 Perfect!', 'good');
+        else if (result.hits / result.total >= 0.8) setCheckResult(`👍 Close! ${missed} word${missed === 1 ? '' : 's'} missed`, 'good');
+        else setCheckResult(`Keep at it: ${result.hits} of ${result.total} words`, 'miss');
+        revealLine();
+    }
+
+    // --- CSV import / export ---
+    // Columns: Cue, Line, and optional Scene (the scene heading each line belongs to).
+    // Two-column Cue,Line files from earlier versions still import.
+
+    function parseCSV(text) {
+        const rows = [];
+        let row = [], field = '', inQuotes = false;
+        text = text.replace(/^\uFEFF/, '');
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (inQuotes) {
+                if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+                else if (c === '"') inQuotes = false;
+                else field += c;
+            } else if (c === '"') inQuotes = true;
+            else if (c === ',') { row.push(field); field = ''; }
+            else if (c === '\n' || c === '\r') {
+                if (c === '\r' && text[i + 1] === '\n') i++;
+                row.push(field); rows.push(row); row = []; field = '';
+            } else field += c;
+        }
+        if (field || row.length) { row.push(field); rows.push(row); }
+        return rows;
+    }
+
     function exportToCSV() {
-        const lines = productions[currentProdIndex].lines.filter(l => l.type === 'line');
-        let csv = "Cue,Line\n" + lines.map(l => `"${l.cue.replace(/"/g, '""')}","${l.text.replace(/"/g, '""')}"`).join("\n");
+        const csvField = v => `"${String(v).replace(/"/g, '""')}"`;
+        const rows = [['Cue', 'Line', 'Scene']];
+        let scene = '', sceneHasLines = true;
+        productions[currentProdIndex].lines.forEach(l => {
+            if (l.type === 'break') {
+                if (!sceneHasLines) rows.push(['', '', scene]);
+                scene = l.text; sceneHasLines = false;
+            } else {
+                rows.push([l.cue, l.text, scene]); sceneHasLines = true;
+            }
+        });
+        if (!sceneHasLines) rows.push(['', '', scene]);
+
+        const csv = rows.map(r => r.map(csvField).join(',')).join('\n');
         const a = document.createElement('a');
         a.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-        a.download = `${productions[currentProdIndex].title}.csv`;
+        a.download = `${productions[currentProdIndex].title.replace(/[\\/:*?"<>|]/g, '')}.csv`;
         a.click();
     }
 
     function importFromCSV(event) {
+        const input = event.target;
+        const file = input.files[0];
+        if (!file) return;
         const reader = new FileReader();
         reader.onload = e => {
-            const rows = e.target.result.split(/\r?\n/).slice(1);
+            const rows = parseCSV(e.target.result);
+            const header = (rows[0] || []).map(h => h.trim().toLowerCase());
+            let col = { cue: header.indexOf('cue'), line: header.findIndex(h => h === 'line' || h === 'your line'), scene: header.indexOf('scene') };
+            if (col.cue !== -1 && col.line !== -1) rows.shift();
+            else col = { cue: 0, line: 1, scene: 2 };
+
+            const lines = productions[currentProdIndex].lines;
+            let scene = '', count = 0;
             rows.forEach(row => {
-                const parts = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (parts.length >= 2) productions[currentProdIndex].lines.push({ type: 'line', cue: parts[0].replace(/^"|"$/g, '').replace(/""/g, '"'), text: parts[1].replace(/^"|"$/g, '').replace(/""/g, '"') });
+                const rowScene = col.scene !== -1 ? (row[col.scene] || '').trim() : '';
+                if (rowScene && rowScene !== scene) { lines.push({ type: 'break', text: rowScene }); scene = rowScene; }
+                const cue = (row[col.cue] || '').trim();
+                const text = (row[col.line] || '').trim();
+                if (text) { lines.push({ type: 'line', cue, text }); count++; }
             });
             syncData(); renderLines();
+            input.value = '';
+            alert(`Imported ${count} line${count === 1 ? '' : 's'}.`);
         };
-        reader.readAsText(event.target.files[0]);
+        reader.readAsText(file);
     }
 
     init();
