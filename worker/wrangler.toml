@@ -30,6 +30,11 @@ binding = "AI"
 binding = "TTS_CACHE"
 id = "f5d394c307fb40e2a6fa8ae559d3d924"
 
+# Scripts shared with a cast, keyed by an unguessable show ID
+[[kv_namespaces]]
+binding = "SHOWS"
+id = "6d82771ba0e845a9bd1d3457d7f0fa75"
+
 # Per-IP request limit, on top of the passcode, so a leaked passcode can't run up the bill
 # Script import: each request is several pages
 [[ratelimits]]

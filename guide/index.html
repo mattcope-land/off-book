@@ -3,181 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Guide | Learn Lines</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Guide | Learn Lines</title>
+    <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <script>
+        // Match the app's light/dark choice
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    </script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-        .step-number {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.25rem;
-            height: 2.25rem;
-            border-radius: 50%;
-            font-weight: bold;
-            font-size: 0.875rem;
-            margin-right: 1rem;
-            flex-shrink: 0;
-        }
+        .guide h2 { font-size: 1.15rem; margin: 36px 0 10px; display: flex; align-items: center; gap: 10px; }
+        .guide h2 span { font-size: 1.4rem; }
+        .guide p, .guide li { color: var(--text); }
+        .guide ul { padding-left: 20px; margin: 8px 0; }
+        .guide li { margin: 8px 0; }
+        .guide .lead { font-size: 1.05rem; color: var(--muted); margin: 0 0 8px; }
+        .guide .tip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin: 14px 0; font-size: 0.95rem; }
     </style>
 </head>
-<body class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased">
+<body>
+<div class="app guide">
+    <header class="topbar">
+        <h1 class="wordmark">LEARN LINES</h1>
+        <a class="btn secondary" href="../">Open the app</a>
+    </header>
+    <p class="lead">Learn your lines with a scene partner that reads your cues out loud and listens to you say your lines.</p>
 
-    <div class="max-w-3xl mx-auto px-6 py-12 lg:py-20">
-        <header class="mb-12 border-b border-slate-200 dark:border-slate-800 pb-8">
-            <h1 class="text-4xl font-black tracking-tight text-black dark:text-white mb-2">LEARN LINES</h1>
-            <p class="text-lg text-slate-500 dark:text-slate-400 font-medium">Actor's Line Learner: User Guide</p>
-        </header>
+    <h2><span>🎭</span> Add your show</h2>
+    <p>Tap <strong>+ Add a show</strong> and choose how:</p>
+    <ul>
+        <li><strong>From the script:</strong> upload the script as a PDF or take photos of the pages. Learn Lines reads the whole script, then asks <strong>who you play</strong>. Tick every name your character goes by (like PUCK and ROBIN), plus ALL or CHORUS if you speak or sing with the group. You need the passcode for this, but only once.</li>
+        <li><strong>From a spreadsheet:</strong> a CSV file with <strong>Cue</strong> and <strong>Line</strong> columns, and optionally <strong>Scene</strong>.</li>
+        <li><strong>Type my lines:</strong> enter each cue (the line just before yours) and your line.</li>
+    </ul>
+    <div class="tip">🔗 <strong>Got a link from your director or a castmate?</strong> Just open it, tap your character, and you're ready. No passcode needed.</div>
 
-        <main class="space-y-16">
-            
-            <p class="text-slate-700 dark:text-slate-300 italic border-l-4 border-slate-300 dark:border-slate-700 pl-4 text-lg">
-                Learn Lines is a digital rehearsal tool designed to help actors memorize scripts through cue-based flashcards and audio synthesis.
-            </p>
+    <h2><span>▶️</span> Practice</h2>
+    <p>Open your show and tap <strong>Practice</strong>. Pick a scene (or all of them) and how:</p>
+    <ul>
+        <li><strong>In order:</strong> your lines in script order. Best when you're starting out.</li>
+        <li><strong>Shuffle:</strong> mixed up, so you know every line without the one before it.</li>
+        <li><strong>Tricky ones:</strong> only the lines you don't know yet.</li>
+    </ul>
+    <p>On each card you'll see the cue (and the lines before it, for context). Then just follow the big button:</p>
+    <ul>
+        <li><strong>🔊 Hear the cue</strong>, then <strong>🎤 Say my line</strong>. Learn Lines listens, shows your line, and underlines any words you missed.</li>
+        <li><strong>Hands-free</strong> (in ⚙️ Settings, on by default) does it all for you: it plays the cue, listens, and moves on when you get it right. Perfect for running lines while you walk around.</li>
+        <li>No microphone? Say your line out loud, tap <strong>👁 Show</strong>, and tap <strong>✓ Got it</strong> or <strong>✗ Missed it</strong>.</li>
+        <li>Stuck? <strong>💡 Hint</strong> shows the first letter of each word. Tap <strong>More</strong> to reveal one word at a time.</li>
+        <li>If it heard you wrong, tap <strong>I got it</strong> or <strong>Try again</strong> under the button.</li>
+    </ul>
+    <div class="tip">⌨️ On a laptop: <strong>Space</strong> is the big button, <strong>← →</strong> go back and forward, <strong>H</strong> is a hint, <strong>S</strong> shows your line, and <strong>1</strong> / <strong>2</strong> mean missed / got it.</div>
 
-            <section class="group">
-                <div class="flex items-center mb-6">
-                    <span class="step-number bg-black text-white dark:bg-white dark:text-black">1</span>
-                    <h2 class="text-xl font-bold uppercase tracking-widest dark:text-white">Production Setup</h2>
-                </div>
-                <div class="ml-12 text-slate-600 dark:text-slate-400 space-y-4">
-                    <p>To begin, you must define the production you are working on.</p>
-                    <ul class="list-disc space-y-3 pl-5 marker:text-slate-400">
-                        <li><strong>Create a Production:</strong> From the home screen, click <span class="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-sm font-mono border border-slate-200 dark:border-slate-700">+ Add</span>.</li>
-                        <li><strong>Details:</strong> Enter the play title and the specific role you are rehearsing.</li>
-                        <li><strong>Management:</strong> You can return to the home screen at any time by clicking the "LEARN LINES" header.</li>
-                    </ul>
-                </div>
-            </section>
+    <h2><span>📈</span> Getting off book</h2>
+    <ul>
+        <li>Get a line right <strong>3 times in a row without a hint</strong> and it's <strong>known</strong>. Miss it and it goes back to learning.</li>
+        <li>Your show shows how much you're off book, scene by scene. Tap a scene to practice just that one.</li>
+        <li>Lines you miss in <strong>Shuffle</strong> or <strong>Tricky ones</strong> come back a few cards later.</li>
+        <li>Practice every day to build your 🔥 streak. Finish a scene and you'll know about it. 🎉</li>
+    </ul>
 
-            <section>
-                <div class="flex items-center mb-6">
-                    <span class="step-number bg-black text-white dark:bg-white dark:text-black">2</span>
-                    <h2 class="text-xl font-bold uppercase tracking-widest dark:text-white">Building the Script</h2>
-                </div>
-                <div class="ml-12 text-slate-600 dark:text-slate-400 space-y-4">
-                    <p>The app uses a "Cue and Response" system to simulate a scene partner.</p>
-                    <ul class="list-disc space-y-3 pl-5 marker:text-slate-400">
-                        <li><strong>Adding Lines:</strong> Enter the <strong>Cue</strong> (the line immediately preceding yours) and <strong>Your Line</strong>. Click <strong>Add Line</strong> to save the pair. If you speak first, leave the cue blank.</li>
-                        <li><strong>Editing:</strong> Tap any line or scene heading in the Script Structure list to edit it.</li>
-                        <li><strong>Scene Organization:</strong> Use the <strong>Scene Heading</strong> field to create organizational breaks (e.g., "Act 1, Scene 2").</li>
-                        <li><strong>Ordering:</strong> Press and drag the <strong>handle (⠿)</strong> to move lines into the correct order. This works with a finger on phones and tablets too.</li>
-                        <li><strong>Bulk Import:</strong> Use the <strong>Import CSV</strong> feature to upload a spreadsheet with the columns <strong>Cue</strong> and <strong>Line</strong>. You can add an optional third column, <strong>Scene</strong>, with the scene each line belongs to (e.g. "Act 1, Scene 2"); a scene break is added wherever the scene changes. The easiest way to get a template is to click <strong>Export CSV</strong>.</li>
-                        <li><strong>Import from Script:</strong> Click <strong>✨ Import from Script</strong> and upload the script as a PDF, photos of the pages, or a text file. Enter your character's name as it appears in the script (plus any other names they go by) and the passcode you were given. AI finds your lines and the cue before each one, and shows them to you to check and fix before they're added. Always read them over: AI can make mistakes, especially with photos.</li>
-                    </ul>
-                </div>
-            </section>
+    <h2><span>🗣️</span> Voices</h2>
+    <ul>
+        <li>Cues are read by <strong>natural voices</strong>, with a different voice for each character. They need the internet the first time, then work offline.</li>
+        <li>Choose a different voice or the cue speed in <strong>⚙️ Settings</strong> during practice. The voices built into your device work offline and don't need anything; the best ones are marked ★.</li>
+        <li>On iPhone and iPad you can download better device voices: <strong>Settings → Accessibility → Spoken Content → Voices → English</strong>, then pick one marked <strong>Enhanced</strong> or <strong>Premium</strong>.</li>
+    </ul>
 
-            <section>
-                <div class="flex items-center mb-6">
-                    <span class="step-number bg-black text-white dark:bg-white dark:text-black">3</span>
-                    <h2 class="text-xl font-bold uppercase tracking-widest dark:text-white">Practice Modes</h2>
-                </div>
-                <div class="ml-12 text-slate-600 dark:text-slate-400 space-y-4">
-                    <p>Once your script is populated, select a rehearsal method from the top navigation:</p>
-                    <ul class="list-disc space-y-3 pl-5 marker:text-slate-400">
-                        <li><strong>In Order:</strong> Recommended for early memorization. You can choose to practice the entire script or a specific scene.</li>
-                        <li><strong>Random:</strong> Recommended for advanced mastery to ensure you know your lines regardless of context.</li>
-                        <li><strong>Tricky Lines:</strong> Only the lines you don't know yet. Use this once you've been through the script a few times.</li>
-                    </ul>
-                </div>
-            </section>
+    <h2><span>🔗</span> Share with your cast</h2>
+    <p>Open a show and tap <strong>Share with cast</strong> to get a link. Everyone who opens it picks their own character and gets their own lines, cues and voices. The same link moves the show to your other phone or tablet.</p>
 
-            <section>
-                <div class="flex items-center mb-6">
-                    <span class="step-number bg-black text-white dark:bg-white dark:text-black">4</span>
-                    <h2 class="text-xl font-bold uppercase tracking-widest dark:text-white">The Flashcard Interface</h2>
-                </div>
-                <div class="ml-12 text-slate-600 dark:text-slate-400 space-y-4">
-                    <ul class="list-disc space-y-3 pl-5 marker:text-slate-400">
-                        <li><strong>Prompt:</strong> The "Cue" is displayed first.</li>
-                        <li><strong>Audio:</strong> Click <strong>🔊 Listen</strong> to hear the cue read aloud by the text-to-speech engine.</li>
-                        <li><strong>Verification:</strong> Recite your line, then tap the <strong>cue</strong> or <strong>👁 Show Line</strong> to reveal the correct response and verify your accuracy.</li>
-                        <li><strong>Say It:</strong> Tap <strong>🎤 Say It</strong> and say your line out loud. The app listens, reveals your line, and marks any words you missed with a red underline. It stops by itself once you've said every word, or tap <strong>⏹ Done</strong>. The first time, your browser will ask for permission to use the microphone. (Works in Chrome, Edge and Safari; the button is hidden in browsers that don't support it.)</li>
-                        <li><strong>Hints:</strong> Stuck? Tap <strong>💡 Hint</strong> to see the first letter of each word of your line. Tap <strong>💡 More</strong> to reveal one more word at a time.</li>
-                        <li><strong>Grading:</strong> After you see your line, tap <strong>✓ Got it</strong> or <strong>✗ Missed it</strong> to move on. <strong>🎤 Say It</strong> grades for you (a perfect line counts as got it). If it misheard you, tap the right button instead.</li>
-                        <li><strong>Navigation:</strong> Use the <strong>Next</strong> and <strong>Previous</strong> buttons to move through the script. At the end you'll see how you did, with the option to practice just the lines you missed.</li>
-                    </ul>
-                </div>
-            </section>
+    <h2><span>📲</span> Put it on your home screen</h2>
+    <ul>
+        <li><strong>iPhone / iPad (Safari):</strong> tap <strong>Share</strong> ⬆︎, then <strong>Add to Home Screen</strong>.</li>
+        <li><strong>Android (Chrome):</strong> tap <strong>Install</strong> when Learn Lines offers it, or <strong>⋮ → Install app</strong>.</li>
+        <li><strong>Computer (Chrome / Edge):</strong> click the install icon at the end of the address bar.</li>
+    </ul>
+    <div class="tip">On iPhone and iPad, the home-screen app keeps its own separate copy of your shows. Open each show in Safari, tap <strong>Share with cast</strong>, and open that link in the home-screen app to move it over.</div>
 
-            <section>
-                <div class="flex items-center mb-6">
-                    <span class="step-number bg-black text-white dark:bg-white dark:text-black">5</span>
-                    <h2 class="text-xl font-bold uppercase tracking-widest dark:text-white">Tracking Progress</h2>
-                </div>
-                <div class="ml-12 text-slate-600 dark:text-slate-400 space-y-4">
-                    <p>Learn Lines remembers how you do on every line, shown by the dot next to it:</p>
-                    <ul class="list-disc space-y-3 pl-5 marker:text-slate-400">
-                        <li><strong>Grey (new):</strong> You haven't practiced it yet.</li>
-                        <li><strong>Yellow (learning):</strong> You're working on it.</li>
-                        <li><strong>Green (known):</strong> You've got it right 3 times in a row without a hint. Missing it again turns it back to yellow.</li>
-                        <li>In <strong>Random</strong> and <strong>Tricky Lines</strong> practice, a line you miss comes back again a few cards later.</li>
-                        <li>Editing a line resets its progress. To start over on the whole production, tap <strong>Reset progress</strong>.</li>
-                    </ul>
-                </div>
-            </section>
-
-            <section>
-                <div class="flex items-center mb-6">
-                    <span class="step-number bg-black text-white dark:bg-white dark:text-black">6</span>
-                    <h2 class="text-xl font-bold uppercase tracking-widest dark:text-white">Settings & Customization</h2>
-                </div>
-                <div class="ml-12 text-slate-600 dark:text-slate-400 space-y-4">
-                    <p>Access the <strong>⚙️ Settings</strong> menu during practice to optimize your session:</p>
-                    <ul class="list-disc space-y-3 pl-5 marker:text-slate-400">
-                        <li><strong>Natural Voices:</strong> The voices at the top of the list sound much more like a real scene partner. They need an internet connection and the same passcode as Import from Script. Each cue is saved on your device the first time it plays, so it's instant after that. Tap <strong>⬇️ Download all cues for offline</strong> to get every cue ready before a rehearsal with no signal.</li>
-                        <li><strong>Device Voices:</strong> The voices built into your phone or computer work offline and need no passcode. The best ones are marked ★. On iPhone and iPad you can download better ones: go to <strong>Settings → Accessibility → Spoken Content → Voices → English</strong> and download a voice marked <strong>Enhanced</strong> or <strong>Premium</strong>. In Microsoft Edge, the voices marked <strong>Natural</strong> are very good.</li>
-                        <li><strong>Playback Speed:</strong> Adjust the "Rate" slider to practice at different performance tempos.</li>
-                        <li><strong>Autoplay:</strong> Enable "Auto-play cue" to have the app automatically speak the next cue as soon as you advance the card.</li>
-                        <li><strong>Scene Partner Mode:</strong> Turn on "Listen for my line after the cue plays" as well, and the app will read the cue and then start listening for your line automatically. Just tap <strong>Next</strong> between lines.</li>
-                    </ul>
-                </div>
-            </section>
-
-            <section>
-                <div class="flex items-center mb-6">
-                    <span class="step-number bg-black text-white dark:bg-white dark:text-black">7</span>
-                    <h2 class="text-xl font-bold uppercase tracking-widest dark:text-white">Install on Your Phone</h2>
-                </div>
-                <div class="ml-12 text-slate-600 dark:text-slate-400 space-y-4">
-                    <p>Learn Lines can be installed like an app, with its own icon, and works without an internet connection once installed.</p>
-                    <ul class="list-disc space-y-3 pl-5 marker:text-slate-400">
-                        <li><strong>iPhone / iPad (Safari):</strong> Tap the <strong>Share</strong> button, then <strong>Add to Home Screen</strong>.</li>
-                        <li><strong>Android (Chrome):</strong> Tap the <strong>⋮</strong> menu, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
-                        <li><strong>Computer (Chrome / Edge):</strong> Click the install icon at the right end of the address bar.</li>
-                        <li><strong>Important on iPhone and iPad:</strong> the installed app keeps its own separate copy of your data. Before installing, <strong>Export CSV</strong> for each production in Safari, then <strong>Import CSV</strong> into the installed app.</li>
-                        <li><strong>Updates:</strong> After an update is released, it appears the next time you open the app.</li>
-                    </ul>
-                </div>
-            </section>
-
-            <section class="bg-slate-50 dark:bg-slate-900/50 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center mb-4">
-                    <span class="step-number bg-black text-white dark:bg-white dark:text-black">8</span>
-                    <h2 class="text-xl font-bold uppercase tracking-wide dark:text-white">Data Policy</h2>
-                </div>
-                <div class="ml-12 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                    <ul class="list-disc space-y-3 pl-5 marker:text-slate-500">
-                        <li>Data is stored <strong>locally in your browser</strong>. There are no accounts or logins.</li>
-                        <li>You can close the browser, open the app in a new tab, or navigate away from the page and your data will be saved.</li>
-                        <li>But, if you clear browser data, you will lose your saved lines. There is no sync between devices.</li>
-                        <li><strong>Export a CSV backup</strong> frequently to save your work safely outside the browser. The backup includes your scene breaks, but not your progress.</li>
-                        <li><strong>Say It</strong> uses your browser's built-in speech recognition, which may send your voice to Apple or Google to be transcribed. Nothing is recorded or saved by Learn Lines.</li>
-                        <li><strong>Import from Script</strong> sends the script pages you choose to an AI service (Fireworks AI) to find your lines. Learn Lines doesn't keep a copy.</li>
-                        <li><strong>Natural voices</strong> send the cue text to Cloudflare to be read aloud. The audio is saved so each cue only has to be created once.</li>
-                    </ul>
-                </div>
-            </section>
-        </main>
-
-        <footer class="mt-24 pt-8 border-t border-slate-200 dark:border-slate-800 text-center text-slate-500 text-xs">
-        </footer>
-    </div>
-
+    <h2><span>🔒</span> Your data</h2>
+    <ul>
+        <li>Your shows and progress are saved <strong>on this device</strong>. There are no accounts.</li>
+        <li>Clearing your browser's data deletes them, so keep your share link, or use <strong>Edit script → Export CSV</strong> for a backup.</li>
+        <li>Importing a script sends it to an AI service (Fireworks AI) to find the lines. Sharing stores the script so your cast's links work. Natural voices send the cue text to Cloudflare to be read aloud.</li>
+        <li>🎤 checking uses your browser's speech recognition, which may send your voice to Apple or Google to be transcribed. Learn Lines doesn't record or keep it.</li>
+    </ul>
+</div>
 </body>
 </html>

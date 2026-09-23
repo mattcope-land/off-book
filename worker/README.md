@@ -12,18 +12,29 @@ The app also keeps its own on-device copy, which makes replays instant and offli
 
 Workers AI's free allowance (10,000 neurons a day) covers roughly 3,600 characters of new
 speech a day. On the Workers Paid plan it's about $0.03 per 1,000 characters beyond that.
-The voice list is in `VOICES` here and `CLOUD_VOICES` in `index.html`; keep them in sync.
+The voice list is in `VOICES` here and `CLOUD_VOICES` in `app.js`; keep them in sync.
 
-## Script import (`POST /extract`)
+## Script import (`POST /extract`, `mode: 'script'`)
 
-The app turns the script into page text (or page images for scans and photos) and sends it here in
-sections. The Worker asks a Fireworks vision model for the character's lines and returns
-`{ lines: [{ scene, cue, line }] }`. The Fireworks key stays in the Worker, so the static
-site never sees it.
+The app turns the script into page text (or page images for scans and photos) and sends it
+here in sections. Images are transcribed to text first; then a Fireworks model returns every
+speech `{ scene, speaker, text }` (plus stage directions between speeches) and the characters
+with a guessed gender, which the app uses to derive any character's cues and to pick voices.
+A section whose answer is cut off comes back `truncated`, and the app splits it and retries.
+Without `mode`, it returns one character's lines, for app versions before whole-script import.
 
-Protection: a shared passcode (`X-Passcode` header), a per-IP rate limit (20 requests a
-minute), request size limits, and a CORS allowlist. Also set a monthly spending limit in
-the Fireworks dashboard.
+## Share links (`POST /shows`, `GET /shows/:id`)
+
+A shared script is stored in the `SHOWS` KV namespace under an unguessable 12-character ID.
+Creating one needs the passcode; reading one doesn't (the ID is the secret). `/speak` also
+accepts requests without the passcode when the text is a line in the given show, so a cast
+member with the link gets natural voices, but the link can't be used to generate anything else.
+
+## Protection
+
+A shared passcode (`X-Passcode` header), per-IP rate limits (20 import/share requests and 300
+new voice clips a minute), request size limits, and a CORS allowlist. Also set a monthly
+spending limit in the Fireworks dashboard.
 
 ## Setup
 
@@ -36,7 +47,7 @@ npx wrangler secret put PASSCODE            # the passcode people type in the ap
 npx wrangler deploy
 ```
 
-Then set `EXTRACT_API` in `index.html` to the deployed URL plus `/extract`.
+Then set `WORKER` at the top of `app.js` to the deployed URL.
 
 To change the passcode, run `secret put PASSCODE` again. To try a different model, change
 `MODEL` in `wrangler.toml` and redeploy. It must be a Fireworks serverless model that
@@ -56,6 +67,6 @@ PASSCODE=...
 ```
 
 Run `npx wrangler dev --port 8787`, serve the site on `http://localhost:8765`, and
-temporarily point `EXTRACT_API` at `http://localhost:8787/extract`.
+temporarily point `WORKER` in `app.js` at `http://localhost:8787`.
 
 To watch live logs from the deployed Worker, use `npx wrangler tail`.

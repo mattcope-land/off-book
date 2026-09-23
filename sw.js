@@ -1,9 +1,11 @@
 // Serves from cache first so the app opens offline, then refreshes the cache
 // in the background. After a deploy, the new version shows on the next open.
 // Bump CACHE when the list of app files changes.
-const CACHE = 'learn-lines-v1';
+const CACHE = 'learn-lines-v2';
 const APP_FILES = [
     './',
+    'styles.css',
+    'app.js',
     'guide/',
     'manifest.webmanifest',
     'icons/icon.svg',

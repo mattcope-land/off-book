@@ -1,14 +1,20 @@
-// POST /extract
-//   headers: X-Passcode
-//   body: { character, aliases?, includeGroup?, scene?, context?, pages: [{ text } | { image: dataURL }] }
-//   returns: { lines: [{ scene, cue, line }] }
+// POST /extract                                      (passcode)
+//   body: { mode: 'script', scene?, context?, pages: [{ text } | { image: dataURL }] }
+//   returns: { entries: [{ scene, speaker, text }], characters: [{ name, gender }], truncated }
+//   Every speech in the pages, plus stage directions between speeches (speaker "").
+//   Without mode: { character, aliases?, includeGroup?, ... } returns one character's
+//   { lines: [{ scene, cue, line }] } (used by app versions before whole-script import).
 //
-// The app sends a long script in several requests; `scene` and `context` carry the
-// current scene heading and the end of the previous section across the boundary.
+//   The app sends a long script in several requests; `scene` and `context` carry the
+//   current scene heading and the end of the previous section across the boundary.
 //
-// POST /speak
-//   headers: X-Passcode
-//   body: { voice, text }
+// POST /shows                                        (passcode)
+//   body: { title, entries, characters }  ->  { id }
+// GET /shows/:id                                     (no passcode: the ID is the secret)
+//   returns the show, for cast members opening a share link
+//
+// POST /speak                                        (passcode, or a show the text is in)
+//   body: { voice, text, show? }
 //   returns: MP3 audio of the text read by that voice
 
 const MAX_IMAGES = 12;
@@ -36,6 +42,48 @@ const LINES_SCHEMA = {
     additionalProperties: false
 };
 
+const SCRIPT_SCHEMA = {
+    type: 'object',
+    properties: {
+        entries: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: { scene: { type: 'string' }, speaker: { type: 'string' }, text: { type: 'string' } },
+                required: ['scene', 'speaker', 'text'],
+                additionalProperties: false
+            }
+        },
+        characters: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: { name: { type: 'string' }, gender: { type: 'string', enum: ['female', 'male', 'unknown'] } },
+                required: ['name', 'gender'],
+                additionalProperties: false
+            }
+        }
+    },
+    required: ['entries', 'characters'],
+    additionalProperties: false
+};
+
+const SCRIPT_INSTRUCTIONS = `You turn a stage play or musical script into structured data so student actors can learn their lines.
+
+Return JSON: {"entries": [{"scene": "...", "speaker": "...", "text": "..."}], "characters": [{"name": "...", "gender": "..."}]}.
+
+entries, in script order:
+- One entry per speech. speaker: the character's label as written, without trailing punctuation (e.g. "PUCK", "LADY MACBETH"). Use the same spelling for the same character every time. Groups such as ALL or CHORUS are speakers too.
+- text: everything spoken or sung in that speech, exactly as written. Join wrapped lines with spaces. Leave out the speaker label and any stage directions inside the speech.
+- A stage direction that comes between two speeches (an entrance, exit, action or sound) gets its own entry with speaker "" and the direction in square brackets, e.g. "[Enter OBERON]".
+- scene: the most recent act/scene heading exactly as written (e.g. "Act 1, Scene 2"), or "" if there is none.
+- Copy the words exactly; do not fix grammar, modernize spelling or summarize.
+- Skip title pages, character lists, headers, footers and page numbers.
+
+characters: every speaker in the entries, once each. gender: "female" or "male" if the script makes it clear (pronouns, titles such as Lord or Queen, character descriptions), otherwise "unknown". Groups are "unknown".
+
+If there is no script text, return {"entries": [], "characters": []}.`;
+
 function instructions({ character, aliases, includeGroup }) {
     const names = [character, ...aliases].map(n => `"${n}"`).join(', ');
     return `You extract one character's lines from a stage play or musical script so a student actor can memorize them.
@@ -56,7 +104,7 @@ function cors(origin, env) {
     const allowed = env.ALLOWED_ORIGINS.split(',').map(s => s.trim());
     return {
         'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, X-Passcode',
         'Access-Control-Max-Age': '86400',
         'Vary': 'Origin'
@@ -153,11 +201,98 @@ async function extract(body, env) {
     return { lines, truncated: finishReason === 'length' };
 }
 
+async function readPages(body, env) {
+    const pages = Array.isArray(body.pages) ? body.pages : [];
+    if (!pages.length) throw new HttpError(400, 'No pages were sent.');
+    const images = pages.filter(p => typeof p.image === 'string');
+    if (images.length > MAX_IMAGES) throw new HttpError(400, `Send at most ${MAX_IMAGES} images per request.`);
+    if (images.some(p => !/^data:image\/(png|jpe?g|webp|gif);base64,/.test(p.image))) throw new HttpError(400, 'Images must be PNG, JPEG, WebP or GIF.');
+    const texts = pages.filter(p => typeof p.text === 'string').map(p => p.text);
+    if (images.length) texts.push(await transcribe(env, images));
+    return texts.join('\n\n').slice(0, MAX_TEXT_CHARS);
+}
+
+function sectionPreamble(body) {
+    const scene = str(body.scene, 200);
+    const context = str(body.context, 2000);
+    let preamble = '';
+    if (scene) preamble += `This section starts in the scene headed "${scene}".\n`;
+    if (context) preamble += `The previous section ended with the text below. It is context only: do not include it in your answer.\n---\n${context}\n---\n`;
+    return preamble + 'Here is the script text:';
+}
+
+const tidySpeaker = v => tidy(v, 100).replace(/[.:]+$/, '').trim();
+
+function cleanEntries(list) {
+    return (Array.isArray(list) ? list : [])
+        .map(e => {
+            const speaker = tidySpeaker(e?.speaker);
+            let text = tidy(e?.text, 5000);
+            if (speaker) text = text.replace(SPEAKER_LABEL, '');
+            else if (text && !/^\[.*\]$/.test(text)) text = `[${text.replace(/^[([]|[)\]]$/g, '')}]`;
+            return { scene: tidy(e?.scene, 200), speaker, text };
+        })
+        .filter(e => e.text);
+}
+
+function cleanCharacters(list) {
+    const seen = new Map();
+    for (const c of Array.isArray(list) ? list : []) {
+        const name = tidySpeaker(c?.name);
+        if (!name || seen.has(name.toUpperCase())) continue;
+        seen.set(name.toUpperCase(), { name, gender: ['female', 'male'].includes(c?.gender) ? c.gender : 'unknown' });
+    }
+    return [...seen.values()];
+}
+
+async function extractScript(body, env) {
+    const text = await readPages(body, env);
+    const { content, finishReason } = await callModel(env, [
+        { role: 'system', content: SCRIPT_INSTRUCTIONS },
+        { role: 'user', content: [{ type: 'text', text: sectionPreamble(body) }, { type: 'text', text }] }
+    ], { max_tokens: 32000, response_format: { type: 'json_schema', json_schema: { name: 'Script', schema: SCRIPT_SCHEMA } } });
+
+    let parsed;
+    try { parsed = JSON.parse(content); }
+    catch {
+        // Cut off mid-JSON: the app splits the section and tries again
+        if (finishReason === 'length') return { entries: [], characters: [], truncated: true };
+        throw new HttpError(502, 'The AI response could not be read. Try again.');
+    }
+    return { entries: cleanEntries(parsed.entries), characters: cleanCharacters(parsed.characters), truncated: finishReason === 'length' };
+}
+
 class HttpError extends Error {
     constructor(status, message, code) { super(message); this.status = status; this.code = code; }
 }
 
-// Must match CLOUD_VOICES in index.html
+// --- Shows shared with a cast ---
+
+const SHOW_ID = /^[A-Za-z0-9]{12}$/;
+const MAX_SHOW_ENTRIES = 8000;
+
+function newShowId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const bytes = crypto.getRandomValues(new Uint8Array(12));
+    return [...bytes].map(b => chars[b % chars.length]).join('');
+}
+
+async function createShow(body, env) {
+    const title = tidy(body.title, 200);
+    const entries = cleanEntries(body.entries);
+    if (!title) throw new HttpError(400, 'The show needs a title.');
+    if (!entries.length) throw new HttpError(400, 'The show has no lines.');
+    if (entries.length > MAX_SHOW_ENTRIES) throw new HttpError(413, 'That script is too long to share.');
+    const id = newShowId();
+    await env.SHOWS.put(`show:${id}`, JSON.stringify({ title, entries, characters: cleanCharacters(body.characters), created: Date.now() }));
+    return { id };
+}
+
+async function getShow(id, env) {
+    return SHOW_ID.test(id) ? env.SHOWS.get(`show:${id}`, 'json') : null;
+}
+
+// Must match CLOUD_VOICES in app.js
 const VOICES = new Set(['aurora', 'ophelia', 'andromeda', 'luna', 'iris', 'helena', 'pandora',
     'hermes', 'apollo', 'aries', 'jupiter', 'draco', 'hyperion', 'zeus']);
 const MAX_SPEAK_CHARS = 1500;
@@ -167,10 +302,15 @@ async function sha256(text) {
     return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function speak(body, env, ctx, ip, headers) {
+async function speak(body, env, ctx, ip, headers, hasPasscode) {
     const text = tidy(body.text, MAX_SPEAK_CHARS);
     if (!text) throw new HttpError(400, 'No text to speak.');
     if (!VOICES.has(body.voice)) throw new HttpError(400, 'Unknown voice.');
+    // Without the passcode, only lines from a shared show can be read, so a share link can't be used to generate anything else
+    if (!hasPasscode) {
+        const show = typeof body.show === 'string' ? await getShow(body.show, env) : null;
+        if (!show || !show.entries.some(e => tidy(e.text, MAX_SPEAK_CHARS) === text)) throw new HttpError(401, 'Wrong passcode.');
+    }
 
     const audioHeaders = { ...headers, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=31536000' };
     const key = `${env.TTS_MODEL}:${body.voice}:${await sha256(text)}`;
@@ -206,22 +346,28 @@ export default {
         if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
 
         const url = new URL(request.url);
-        if (!['/extract', '/speak'].includes(url.pathname) || request.method !== 'POST') return json({ error: 'Not found' }, 404, headers);
-
-        if (!env.PASSCODE || !safeEqual(request.headers.get('X-Passcode') || '', env.PASSCODE)) {
-            return json({ error: 'Wrong passcode.' }, 401, headers);
-        }
         const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const hasPasscode = !!env.PASSCODE && safeEqual(request.headers.get('X-Passcode') || '', env.PASSCODE);
+
+        const showMatch = url.pathname.match(/^\/shows\/([^/]+)$/);
+        if (showMatch && request.method === 'GET') {
+            const show = await getShow(showMatch[1], env);
+            return show ? json(show, 200, { ...headers, 'Cache-Control': 'public, max-age=300' }) : json({ error: "That show link isn't valid." }, 404, headers);
+        }
+
+        if (!['/extract', '/speak', '/shows'].includes(url.pathname) || request.method !== 'POST') return json({ error: 'Not found' }, 404, headers);
 
         if (url.pathname === '/speak') {
             try {
-                return await speak(await request.json(), env, ctx, ip, headers);
+                return await speak(await request.json(), env, ctx, ip, headers, hasPasscode);
             } catch (e) {
                 if (e instanceof HttpError) return json({ error: e.message, code: e.code }, e.status, headers);
                 console.error(e);
                 return json({ error: "Couldn't create the voice. Try again." }, 500, headers);
             }
         }
+
+        if (!hasPasscode) return json({ error: 'Wrong passcode.' }, 401, headers);
 
         if (env.LIMITER) {
             const { success } = await env.LIMITER.limit({ key: ip });
@@ -237,7 +383,8 @@ export default {
             if (raw.length > MAX_BODY_BYTES) throw new HttpError(413, 'Too much at once. Try fewer or smaller pages.');
             let body;
             try { body = JSON.parse(raw); } catch { throw new HttpError(400, 'Invalid request.'); }
-            return json(await extract(body, env), 200, headers);
+            if (url.pathname === '/shows') return json(await createShow(body, env), 200, headers);
+            return json(await (body.mode === 'script' ? extractScript(body, env) : extract(body, env)), 200, headers);
         } catch (e) {
             if (e instanceof HttpError) return json({ error: e.message }, e.status, headers);
             console.error(e);

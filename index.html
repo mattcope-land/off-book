@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Learn Lines | Actor's Line Learner</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -11,1487 +11,255 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Learn Lines">
-    <style>
-        :root {
-            --bg: #ffffff;
-            --text: #1a1a1a;
-            --surface: #f4f4f4;
-            --border: #dddddd;
-            --accent: #000000;
-            --button-text: #ffffff;
-            --shadow: 0 2px 5px rgba(0,0,0,0.1);
-            --good: #1a7f37;
-            --miss: #d1242f;
-            --learning: #bf8700;
-        }
-
-        [data-theme="dark"] {
-            --bg: #121212;
-            --text: #e0e0e0;
-            --surface: #1e1e1e;
-            --border: #333333;
-            --accent: #ffffff;
-            --button-text: #000000;
-            --shadow: 0 4px 10px rgba(0,0,0,0.3);
-            --good: #4ac26b;
-            --miss: #ff6b6b;
-            --learning: #e3b341;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            transition: background 0.3s, color 0.3s;
-            line-height: 1.6;
-        }
-
-        .container { max-width: 600px; margin: 0 auto; }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        .header-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        h1 { font-weight: 700; font-size: 1.5rem; letter-spacing: -0.02em; margin: 0; cursor: pointer; }
-        h2 { font-weight: 600; margin-top: 0; }
-
-        button {
-            background: var(--accent);
-            color: var(--button-text);
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            border-radius: 4px;
-            transition: opacity 0.2s;
-        }
-
-        button:hover { opacity: 0.8; }
-        button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
-        button.audio-btn { padding: 8px 16px; font-size: 0.8rem; border-radius: 20px; }
-        button.small { padding: 5px 10px; font-size: 0.75rem; }
-        button.delete-line { background: none; color: #ff4444; font-size: 1.2rem; padding: 0 5px; }
-        button.listening { background: var(--miss); color: #fff; border-color: var(--miss); }
-
-        .top-nav {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-            flex-wrap: wrap;
-        }
-
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 24px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            box-shadow: var(--shadow);
-            position: relative;
-        }
-
-        .production-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            cursor: pointer;
-        }
-
-        .role-badge {
-            display: inline-block;
-            background: var(--accent);
-            color: var(--button-text);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .scene-heading-badge {
-            display: block;
-            background: var(--border);
-            color: var(--text);
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        input, textarea, select {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0 20px 0;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 1rem;
-            font-family: inherit;
-        }
-
-        .line-item { display: flex; align-items: center; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 0; gap: 10px; }
-        .line-item.scene-break { background: var(--border); border-radius: 4px; margin: 15px 0 5px 0; padding: 5px 10px; }
-        .line-item.dragging { opacity: 0.5; }
-        .line-item.editing { display: block; padding: 12px; }
-        .handle { cursor: grab; color: #888; font-size: 1.2rem; padding: 4px 8px; touch-action: none; user-select: none; -webkit-user-select: none; }
-        .line-content { flex-grow: 1; min-width: 0; font-size: 0.85rem; cursor: pointer; }
-        .line-content > div { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .line-content .cue-preview { color: #888; }
-        .line-content.break-text { color: var(--text); font-weight: 700; text-transform: uppercase; font-size: 0.75rem; }
-        .edit-actions { display: flex; gap: 10px; }
-
-        .modal {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background: var(--bg);
-            padding: 30px;
-            border-radius: 8px;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-        }
-
-        .flashcard-area {
-            text-align: center;
-            min-height: 250px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .label { font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 8px; }
-        .line-text { font-size: 1.25rem; font-weight: 500; }
-        .hint { font-size: 0.75rem; color: #888; margin-top: 6px; }
-        .hidden { display: none !important; }
-
-        .card-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
-        .heard { font-size: 0.85rem; color: #888; font-style: italic; margin-top: 12px; min-height: 1.2em; }
-        .check-result { font-weight: 700; margin-top: 12px; }
-        .check-result.good { color: var(--good); }
-        .check-result.miss { color: var(--miss); }
-        .word-missed { color: var(--miss); text-decoration: underline wavy; text-underline-offset: 4px; }
-        .hint-letters { margin-top: 12px; letter-spacing: 0.08em; color: #888; }
-        .grade-row { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
-        .grade-row button.picked-good { background: var(--good); color: #fff; border-color: var(--good); }
-        .grade-row button.picked-miss { background: var(--miss); color: #fff; border-color: var(--miss); }
-        .status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--border); }
-        .status-dot.learning { background: var(--learning); }
-        .status-dot.known { background: var(--good); }
-        .progress-summary { font-size: 0.85rem; color: #888; margin-bottom: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        .link-button { background: none; border: none; color: #888; text-decoration: underline; padding: 0; font-size: 0.8rem; }
-
-        .settings-tray {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-
-        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-
-        .nav-controls { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
-        .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text); padding: 5px 10px; font-size: 1rem; }
-
-        .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-        #csv-import-input { display: none; }
-
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 15px;
-            font-weight: 500;
-        }
-        .toggle-container input { width: auto; margin: 0; }
-        .review-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
-        .review-item textarea { margin: 4px 0 10px 0; }
-        .review-item .review-head { display: flex; justify-content: space-between; align-items: center; }
-        .review-scene { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; margin: 20px 0 8px 0; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1 onclick="showHome()">LEARN LINES</h1>
-        <div class="header-controls">
-            <button class="secondary small" onclick="window.open('guide/', '_blank')">Guide</button>
-            <button id="theme-btn" class="theme-toggle" onclick="toggleTheme()">☀️</button>
+<div class="app">
+
+    <!-- Home: the list of shows -->
+    <section id="view-home" class="view">
+        <header class="topbar">
+            <h1 class="wordmark">LEARN LINES</h1>
+            <div class="topbar-actions">
+                <button class="icon-btn" onclick="window.open('guide/', '_blank')" aria-label="Guide">?</button>
+                <button id="theme-btn" class="icon-btn" onclick="toggleTheme()" aria-label="Light or dark">☀️</button>
+            </div>
+        </header>
+        <div id="install-banner" class="banner hidden"></div>
+        <div id="streak" class="streak hidden"></div>
+        <div id="show-list"></div>
+        <div id="home-empty" class="empty hidden">
+            <div class="empty-emoji">🎭</div>
+            <h2>Learn your lines</h2>
+            <p>Add your show, then practice with a scene partner that reads your cues and listens to your lines.</p>
+            <p class="muted small">Got a link from your director or a castmate? Just open it.</p>
         </div>
-    </header>
+        <button class="btn primary big" onclick="showAdd()">+ Add a show</button>
+    </section>
 
-    <div id="home-view">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>Productions</h2>
-            <button onclick="showNewProduction()">+ Add</button>
+    <!-- Add a show: choose how -->
+    <section id="view-add" class="view hidden">
+        <header class="topbar"><button class="icon-btn" onclick="showHome()" aria-label="Back">←</button><h2>Add a show</h2><span class="topbar-spacer"></span></header>
+        <button class="option-card online-only" onclick="showImport()">
+            <span class="option-emoji">✨</span>
+            <span><strong>From the script</strong><small>Upload a PDF or photos of the pages. Learn Lines finds your lines for you.</small></span>
+        </button>
+        <button class="option-card" onclick="showManual(true)">
+            <span class="option-emoji">📊</span>
+            <span><strong>From a spreadsheet</strong><small>A CSV file with Cue and Line columns.</small></span>
+        </button>
+        <button class="option-card" onclick="showManual(false)">
+            <span class="option-emoji">✏️</span>
+            <span><strong>Type my lines</strong><small>Enter each cue and line yourself.</small></span>
+        </button>
+    </section>
+
+    <!-- New show from a spreadsheet or typed in -->
+    <section id="view-manual" class="view hidden">
+        <header class="topbar"><button class="icon-btn" onclick="showAdd()" aria-label="Back">←</button><h2>New show</h2><span class="topbar-spacer"></span></header>
+        <label for="manual-title">Show title</label>
+        <input type="text" id="manual-title" placeholder="e.g. A Midsummer Night's Dream">
+        <label for="manual-role">Your character</label>
+        <input type="text" id="manual-role" placeholder="e.g. Puck">
+        <div id="manual-csv-field">
+            <label for="manual-csv">Spreadsheet (CSV)</label>
+            <label class="file-drop" for="manual-csv"><span id="manual-csv-label">📊 Choose a CSV file</span></label>
+            <input type="file" id="manual-csv" class="visually-hidden" accept=".csv,text/csv" onchange="fileLabel(this, 'manual-csv-label', '📊 Choose a CSV file')">
+            <p class="muted small">Columns: Cue, Line, and optionally Scene.</p>
         </div>
-        <div id="production-list"></div>
-    </div>
+        <button class="btn primary big" onclick="createManual()">Create show</button>
+        <div id="manual-status" class="status"></div>
+    </section>
 
-    <div id="create-view" class="hidden">
-        <h2>New Production</h2>
-        <label>Title</label>
-        <input type="text" id="prod-title" placeholder="e.g. A Midsummer Night's Dream">
-        <label>Your Role</label>
-        <input type="text" id="prod-role" placeholder="e.g. Puck">
-        <button onclick="saveProduction()">Create Production</button>
-        <button class="secondary" onclick="showHome()">Cancel</button>
-    </div>
-
-    <div id="entry-view" class="hidden">
-        <div class="top-nav">
-            <button onclick="handlePracticeInOrder()">Practice: In Order</button>
-            <button onclick="startPractice(true)">Practice: Random</button>
-            <button onclick="startTricky()">Practice: Tricky Lines</button>
-            <button class="secondary" onclick="showHome()">← Back to Home</button>
+    <!-- New show from the script -->
+    <section id="view-import" class="view hidden">
+        <header class="topbar"><button class="icon-btn" onclick="showAdd()" aria-label="Back">←</button><h2>From the script</h2><span class="topbar-spacer"></span></header>
+        <label for="import-title">Show title</label>
+        <input type="text" id="import-title" placeholder="e.g. A Midsummer Night's Dream">
+        <label for="import-files">Script</label>
+        <label class="file-drop" for="import-files"><span id="import-files-label">📄 Choose a PDF or photos of the pages</span></label>
+        <input type="file" id="import-files" class="visually-hidden" accept=".pdf,application/pdf,image/*,.txt,text/plain" multiple onchange="importFilesChanged()">
+        <div id="import-passcode-field">
+            <label for="import-passcode">Passcode</label>
+            <input type="password" id="import-passcode" autocomplete="off">
         </div>
+        <button id="import-btn" class="btn primary big" onclick="runImport()">Read the script</button>
+        <div id="import-progress" class="hidden" style="margin-top: 20px;">
+            <div class="bar"><div id="import-bar"></div></div>
+        </div>
+        <div id="import-status" class="status"></div>
+    </section>
 
-        <h2 id="entry-title"></h2>
-        <div id="entry-role" class="role-badge"></div>
-        <div id="entry-progress" class="progress-summary"></div>
+    <!-- Who do you play? (after importing, or opening a share link) -->
+    <section id="view-pick" class="view hidden">
+        <header class="topbar"><button class="icon-btn" onclick="pickBack()" aria-label="Back">←</button><h2>Who do you play?</h2><span class="topbar-spacer"></span></header>
+        <p id="pick-intro" class="muted"></p>
+        <div id="pick-list" class="pick-list"></div>
+        <p class="muted small">Pick every name your character goes by, like PUCK and ROBIN. Add ALL or CHORUS if you speak or sing with the group.</p>
+        <button id="pick-btn" class="btn primary big" onclick="confirmPick()" disabled>Start</button>
+    </section>
 
+    <!-- Opening a share link -->
+    <section id="view-join" class="view hidden">
+        <div class="empty">
+            <div class="empty-emoji">🎭</div>
+            <h2 id="join-title">Opening your show…</h2>
+            <p id="join-status" class="muted"></p>
+            <button id="join-home" class="btn secondary hidden" onclick="showHome()">Go to my shows</button>
+        </div>
+    </section>
+
+    <!-- A show -->
+    <section id="view-show" class="view hidden">
+        <header class="topbar">
+            <button class="icon-btn" onclick="showHome()" aria-label="Back">←</button>
+            <span></span>
+            <button class="icon-btn" onclick="showEdit()" aria-label="Edit script">✏️</button>
+        </header>
+        <h2 id="show-title" class="show-title"></h2>
+        <div id="show-role" class="role-badge"></div>
+        <div class="progress-hero">
+            <div class="bar big"><div id="show-bar"></div></div>
+            <div id="show-progress-text" class="progress-text"></div>
+        </div>
+        <button id="practice-btn" class="btn primary big" onclick="openPracticeSheet()">▶ Practice</button>
+        <div id="show-empty" class="empty hidden">
+            <p>No lines yet.</p>
+            <button class="btn secondary" onclick="showEdit()">Add your lines</button>
+        </div>
+        <div id="scenes-section">
+            <h3 class="section-title">Scenes</h3>
+            <div id="scene-list"></div>
+        </div>
+        <div class="row-actions">
+            <button class="btn secondary online-only" onclick="shareShow()">🔗 Share with cast</button>
+            <button class="btn secondary" onclick="showEdit()">✏️ Edit script</button>
+        </div>
+        <div id="share-box" class="share-box hidden"></div>
+    </section>
+
+    <!-- Edit a show's lines -->
+    <section id="view-edit" class="view hidden">
+        <header class="topbar"><button class="icon-btn" onclick="showShow()" aria-label="Back">←</button><h2>Edit script</h2><span class="topbar-spacer"></span></header>
         <div class="card">
-            <h3>Add to Script</h3>
-            <div id="line-inputs">
-                <label>The Cue</label>
-                <textarea id="line-cue" rows="2" placeholder="The line before yours (leave blank if you speak first)"></textarea>
-                <label>Your Line</label>
-                <textarea id="line-text" rows="3" placeholder="Your spoken line..."></textarea>
-                <button onclick="addLine()">Add Line</button>
-            </div>
-
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
-                <label>Scene Heading</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="scene-name" placeholder="e.g. Act 1, Scene 1" style="margin-bottom: 0;">
-                    <button class="secondary" onclick="addSceneBreak()">Add Break</button>
-                </div>
-            </div>
-
-            <div class="action-row" style="margin-top: 20px;">
-                <button class="secondary small" onclick="exportToCSV()">📤 Export CSV</button>
-                <button class="secondary small" onclick="document.getElementById('csv-import-input').click()">📥 Import CSV</button>
-                <input type="file" id="csv-import-input" accept=".csv,text/csv" onchange="importFromCSV(event)">
-                <button class="secondary small ai-only" onclick="showScriptImport()">✨ Import from Script</button>
+            <label for="line-cue" style="margin-top: 0;">The cue</label>
+            <textarea id="line-cue" rows="2" placeholder="The line before yours (leave blank if you speak first)"></textarea>
+            <label for="line-text">Your line</label>
+            <textarea id="line-text" rows="3" placeholder="What you say"></textarea>
+            <button class="btn primary big" onclick="addLine()">Add line</button>
+            <label for="scene-name">Scene heading</label>
+            <div class="inline-field">
+                <input type="text" id="scene-name" placeholder="e.g. Act 1, Scene 1">
+                <button class="btn secondary" onclick="addSceneBreak()">Add</button>
             </div>
         </div>
-
+        <div class="row-actions">
+            <button id="change-role-btn" class="btn secondary hidden" onclick="changeCharacter()">🎭 Change character</button>
+            <button class="btn secondary" onclick="exportToCSV()">📤 Export CSV</button>
+            <button class="btn secondary" onclick="document.getElementById('csv-import-input').click()">📥 Import CSV</button>
+            <input type="file" id="csv-import-input" class="visually-hidden" accept=".csv,text/csv" onchange="importFromCSV(event)">
+        </div>
+        <h3 class="section-title">Your lines <span class="muted">· tap to edit, drag ⠿ to reorder</span></h3>
         <div id="current-lines-list"></div>
-    </div>
-
-    <div id="script-import-view" class="hidden">
-        <h2>Import from Script</h2>
-        <p class="hint" style="margin-bottom: 20px;">Upload the script as a PDF or photos of the pages. AI finds your character's lines and cues, and you check them before they're added.</p>
-        <label>Character Name</label>
-        <input type="text" id="ai-character" placeholder="As written in the script, e.g. PUCK">
-        <label>Other Names in the Script (optional)</label>
-        <input type="text" id="ai-aliases" placeholder="e.g. Robin Goodfellow, Robin">
-        <div class="toggle-container" style="margin: 0 0 20px 0;">
-            <input type="checkbox" id="ai-include-group">
-            <label for="ai-include-group">Include group lines (ALL, CHORUS, ENSEMBLE)</label>
+        <div class="row-actions">
+            <button class="btn danger" onclick="resetProgress()">Reset progress</button>
+            <button class="btn danger" onclick="deleteShow()">Delete show</button>
         </div>
-        <label>Script (PDF, photos, or a text file)</label>
-        <input type="file" id="ai-files" accept=".pdf,application/pdf,image/*,.txt,text/plain" multiple>
-        <label>Passcode</label>
-        <input type="password" id="ai-passcode" autocomplete="off">
-        <button id="ai-extract-btn" onclick="runScriptImport()">Find My Lines</button>
-        <button class="secondary" onclick="showEntryView(currentProdIndex)">Cancel</button>
-        <div id="ai-status" class="heard"></div>
+    </section>
 
-        <div id="ai-review" class="hidden">
-            <h3>Check Your Lines</h3>
-            <p class="hint">AI can make mistakes. Fix anything that's wrong and remove extras, then add them to your script.</p>
-            <div id="ai-results"></div>
-            <button onclick="addExtractedLines()">Add Lines to Script</button>
-            <button class="secondary" onclick="showEntryView(currentProdIndex)">Cancel</button>
-        </div>
-    </div>
+    <!-- Practice -->
+    <section id="view-practice" class="view hidden">
+        <header class="topbar practice-top">
+            <button class="icon-btn" onclick="exitPractice()" aria-label="Stop practicing">✕</button>
+            <div class="practice-progress"><div class="bar"><div id="practice-bar"></div></div><span id="practice-count"></span></div>
+            <button class="icon-btn" onclick="openSettings()" aria-label="Settings">⚙️</button>
+        </header>
 
-    <div id="practice-view" class="hidden">
-        <div style="display:flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <h2 id="practice-title" style="margin-bottom:5px"></h2>
-                <div id="practice-role" class="role-badge"></div>
-                <div id="current-scene-display" class="scene-heading-badge hidden"></div>
-            </div>
-            <button class="secondary" onclick="toggleSettings()">⚙️ Settings</button>
-        </div>
-
-        <div id="settings-tray" class="settings-tray hidden">
-            <label>Choose Voice</label>
-            <select id="voice-select" onchange="saveVoicePreference()"></select>
-
-            <div id="cloud-voice-settings" class="hidden">
-                <label>Passcode for Natural Voices</label>
-                <input type="password" id="voice-passcode" autocomplete="off" onchange="setPasscode(this.value.trim())">
-                <button class="secondary small" onclick="downloadVoices()">⬇️ Download all cues for offline</button>
-                <div id="voice-download-status" class="hint" style="margin: 6px 0 16px 0;"></div>
-            </div>
-
-            <div class="settings-grid">
-                <div><label>Speed</label><input type="range" id="voice-rate" min="0.5" max="2" step="0.1" value="1"></div>
-                <div id="pitch-setting"><label>Pitch</label><input type="range" id="voice-pitch" min="0" max="2" step="0.1" value="1"></div>
-            </div>
-
-            <div class="toggle-container">
-                <input type="checkbox" id="autoplay-toggle" onchange="saveAutoplayPreference()">
-                <label for="autoplay-toggle">Auto-play cue on new card</label>
-            </div>
-            <div class="toggle-container speech-only">
-                <input type="checkbox" id="listen-after-cue-toggle" onchange="saveListenAfterCuePreference()">
-                <label for="listen-after-cue-toggle">Listen for my line after the cue plays</label>
-            </div>
-        </div>
-
-        <div id="practice-card" class="card flashcard-area">
-            <div onclick="revealLine()" style="cursor:pointer; width: 100%;">
-                <div class="label">The Cue</div>
-                <div id="display-cue" class="line-text"></div>
-                <div id="reveal-hint" class="hint">Say your line, then tap to check</div>
-                <div id="hint-text" class="line-text hint-letters hidden"></div>
-            </div>
-
-            <div class="card-actions">
-                <button class="secondary audio-btn" onclick="speakCue()">🔊 Listen</button>
-                <button id="mic-btn" class="secondary audio-btn speech-only" onclick="toggleListening()">🎤 Say It</button>
-                <button id="hint-btn" class="secondary audio-btn" onclick="showHint()">💡 Hint</button>
-                <button class="secondary audio-btn" onclick="revealLine()">👁 Show Line</button>
-            </div>
-            <div id="heard-text" class="heard"></div>
-
-            <div id="line-reveal-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border); width: 100%; padding-top: 20px;">
-                <div class="label">Your Line</div>
-                <div id="display-line" class="line-text"></div>
-                <div id="check-result" class="check-result"></div>
-                <div class="grade-row">
-                    <button id="grade-miss" class="secondary" onclick="gradeLine(false)">✗ Missed it</button>
-                    <button id="grade-got" class="secondary" onclick="gradeLine(true)">✓ Got it</button>
+        <div id="practice-main">
+            <div id="practice-scene" class="scene-label"></div>
+            <div class="practice-card">
+                <div id="context" class="context"></div>
+                <div id="cue-by" class="speaker"></div>
+                <div id="display-cue" class="cue-text"></div>
+                <div id="hint-text" class="hint-letters hidden"></div>
+                <div id="heard-text" class="heard"></div>
+                <div id="line-reveal" class="reveal hidden">
+                    <div class="speaker">You</div>
+                    <div id="display-line" class="line-text"></div>
+                    <div id="check-result" class="check-result"></div>
                 </div>
             </div>
-        </div>
 
-        <div id="session-summary" class="card hidden" style="text-align: center;">
-            <h3>Session Complete</h3>
-            <div id="summary-text"></div>
-            <div class="card-actions">
-                <button id="summary-missed-btn" onclick="practiceMissed()">Practice Missed Lines</button>
-                <button class="secondary" onclick="restartSession()">Start Over</button>
+            <div class="primary-area">
+                <button id="primary-btn" class="btn primary huge" onclick="primaryAction()"></button>
+                <div id="grade-row" class="grade-row hidden">
+                    <button class="btn miss" onclick="gradeLine(false)">✗ Missed it</button>
+                    <button class="btn good" onclick="gradeLine(true)">✓ Got it</button>
+                </div>
+            </div>
+            <div id="fix-grade" class="fix-grade"></div>
+
+            <div class="tool-row">
+                <button id="tool-back" class="tool" onclick="prevLine()">⏮<span>Back</span></button>
+                <button class="tool" onclick="replayCue()">🔊<span>Cue</span></button>
+                <button id="hint-btn" class="tool" onclick="showHint()">💡<span>Hint</span></button>
+                <button class="tool" onclick="showLine()">👁<span>Show</span></button>
+                <button class="tool" onclick="nextLine()">⏭<span>Skip</span></button>
             </div>
         </div>
 
-        <div id="practice-nav" class="nav-controls">
-            <button class="secondary" onclick="prevLine()">Previous</button>
-            <button onclick="nextLine()">Next</button>
+        <div id="session-summary" class="summary hidden">
+            <div class="empty-emoji" id="summary-emoji">🎉</div>
+            <h2>Nice work!</h2>
+            <div id="summary-text"></div>
+            <button id="summary-missed-btn" class="btn primary big" onclick="practiceMissed()">Practice the ones I missed</button>
+            <button class="btn secondary big" onclick="restartSession()">Go again</button>
+            <button class="btn secondary big" onclick="exitPractice()">Done</button>
         </div>
-        <div style="text-align: center; margin-top: 20px;">
-            <button class="secondary" onclick="showEntryView(currentProdIndex)">Exit Practice</button>
-        </div>
-    </div>
-
-    <div id="scene-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>Practice Scope</h3>
-            <p>Practice the whole script or a specific scene?</p>
-            <button style="width:100%; margin-bottom:10px;" onclick="startPractice(false)">Whole Script</button>
-            <label style="font-size:0.8rem; display:block; text-align:left;">Select Scene:</label>
-            <select id="scene-select-dropdown" style="margin-top:5px;"></select>
-            <button class="secondary" style="width:100%; margin-bottom:10px;" onclick="startPracticeWithScene()">Practice Selected Scene</button>
-            <button class="secondary" style="width:100%" onclick="closeModal()">Cancel</button>
-        </div>
-    </div>
+    </section>
 </div>
 
-<script>
-    let productions = JSON.parse(localStorage.getItem('offBookData')) || [];
-    let currentProdIndex = null;
-    let practiceLines = [];
-    let practiceIndex = 0;
-    let voices = [];
-    let editingIndex = null;
-    let sessionMode = 'order';      // 'order', 'random' or 'tricky'
-    let sessionStart = null;        // how the session began, for Start Over
-    let sessionResults = new Map(); // line -> whether it was got right, last grade this session
-    let card = null;                // this card's hints used and grade
-    const KNOWN_STREAK = 3;         // correct in a row, without hints, for a line to count as known
-    const synth = window.speechSynthesis;
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let currentUtterance = null;
-    let recognition = null;
-    let lastHeard = '';
-    let extracted = [];
-
-    // Cloudflare Worker for script import and natural voices (see worker/). Empty hides both features.
-    const WORKER = 'https://learn-lines-extract.mmcopeland.workers.dev';
-    const EXTRACT_API = WORKER && WORKER + '/extract';
-    const SPEAK_API = WORKER && WORKER + '/speak';
-
-    // Deepgram Aura-2 voices on Workers AI; must match VOICES in worker/src/index.js
-    const CLOUD_VOICES = [
-        ['aurora', 'Aurora: cheerful, expressive (female)'],
-        ['ophelia', 'Ophelia: enthusiastic, expressive (female)'],
-        ['andromeda', 'Andromeda: casual, expressive (female)'],
-        ['luna', 'Luna: friendly, young (female)'],
-        ['iris', 'Iris: cheerful, young (female)'],
-        ['helena', 'Helena: warm, a little raspy (female)'],
-        ['pandora', 'Pandora: calm, British (female)'],
-        ['hermes', 'Hermes: expressive, engaging (male)'],
-        ['apollo', 'Apollo: confident, casual (male)'],
-        ['aries', 'Aries: warm, energetic (male)'],
-        ['jupiter', 'Jupiter: expressive, deep (male)'],
-        ['draco', 'Draco: warm, deep, British (male)'],
-        ['hyperion', 'Hyperion: warm, Australian (male)'],
-        ['zeus', 'Zeus: deep, smooth (male)']
-    ];
-    const VOICE_CACHE = 'learn-lines-voices';
-    const player = new Audio();
-    let bestDeviceVoice = null;
-    const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/';
-
-    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-    function init() {
-        // Theme init
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-            document.documentElement.setAttribute('data-theme', savedTheme);
-            updateThemeIcon(savedTheme);
-        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            updateThemeIcon('dark');
-        }
-
-        document.getElementById('autoplay-toggle').checked = localStorage.getItem('autoPlayCue') === 'true';
-        document.getElementById('listen-after-cue-toggle').checked = localStorage.getItem('listenAfterCue') === 'true';
-        if (!SpeechRec) document.querySelectorAll('.speech-only').forEach(el => el.classList.add('hidden'));
-        if (!EXTRACT_API) document.querySelectorAll('.ai-only').forEach(el => el.classList.add('hidden'));
-
-        loadVoices();
-        if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
-        // iOS only lets audio play programmatically once the element has played during a tap
-        document.addEventListener('pointerdown', unlockAudio, { once: true });
-        renderHome();
-
-        // Ask the browser not to evict saved lines when storage runs low
-        if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-    }
-
-    function updateThemeIcon(theme) {
-        document.getElementById('theme-btn').innerText = theme === 'dark' ? '🌙' : '☀️';
-    }
-
-    function toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateThemeIcon(next);
-    }
-
-    // The passcode for the Worker, shared by script import and natural voices
-    function getPasscode() { return localStorage.getItem('extractPasscode') || ''; }
-    function setPasscode(value) {
-        if (value) localStorage.setItem('extractPasscode', value);
-        else localStorage.removeItem('extractPasscode');
-        document.getElementById('voice-passcode').value = value;
-    }
-
-    // Higher is better. Browsers list their best voices under these names.
-    function voiceQuality(v) {
-        if (/premium/i.test(v.name)) return 5;
-        if (/enhanced|natural|neural/i.test(v.name)) return 4;
-        if (/online/i.test(v.name)) return 3;
-        if (/google/i.test(v.name)) return 2;
-        return v.localService === false ? 1 : 0;
-    }
-
-    function loadVoices() {
-        voices = synth.getVoices();
-        const lang = (navigator.language || 'en').slice(0, 2).toLowerCase();
-        const ranked = voices.map((v, i) => ({ v, i, q: voiceQuality(v) }));
-        const mine = ranked.filter(x => x.v.lang.toLowerCase().startsWith(lang)).sort((a, b) => b.q - a.q || a.v.name.localeCompare(b.v.name));
-        const others = ranked.filter(x => !mine.includes(x));
-        bestDeviceVoice = (mine[0] || ranked[0])?.v || null;
-
-        const option = x => `<option value="device:${x.i}">${esc(x.v.name)}${x.q >= 4 ? ' ★' : ''}</option>`;
-        let html = SPEAK_API ? `<optgroup label="Natural voices (online, needs passcode)">${CLOUD_VOICES.map(([id, label]) => `<option value="cloud:${id}">${esc(label)}</option>`).join('')}</optgroup>` : '';
-        if (mine.length) html += `<optgroup label="Voices on this device">${mine.map(option).join('')}</optgroup>`;
-        if (others.length) html += `<optgroup label="Other languages">${others.map(option).join('')}</optgroup>`;
-
-        const select = document.getElementById('voice-select');
-        select.innerHTML = html;
-
-        // Natural voices need a passcode, so they're only used once chosen; the default is the best device voice
-        const pref = localStorage.getItem('preferredVoice');
-        const saved = voices.findIndex(v => v.name === pref);
-        if (pref && pref.startsWith('cloud:') && SPEAK_API) select.value = pref;
-        else if (saved !== -1) select.value = `device:${saved}`;
-        else select.value = mine.length ? `device:${mine[0].i}` : '';
-        updateVoiceSettings();
-    }
-
-    function selectedVoice() {
-        const [type, id] = (document.getElementById('voice-select').value || '').split(':');
-        if (type === 'cloud') return { cloud: id };
-        return { device: voices[id] || bestDeviceVoice };
-    }
-
-    function saveVoicePreference() {
-        const choice = selectedVoice();
-        if (choice.cloud) localStorage.setItem('preferredVoice', `cloud:${choice.cloud}`);
-        else if (choice.device) localStorage.setItem('preferredVoice', choice.device.name);
-        updateVoiceSettings();
-    }
-
-    function updateVoiceSettings() {
-        const cloud = !!selectedVoice().cloud;
-        document.getElementById('cloud-voice-settings').classList.toggle('hidden', !cloud);
-        // Recorded audio can change speed but not pitch
-        document.getElementById('pitch-setting').classList.toggle('hidden', cloud);
-        document.getElementById('voice-passcode').value = getPasscode();
-        document.getElementById('voice-download-status').innerText = '';
-    }
-
-    function saveAutoplayPreference() {
-        localStorage.setItem('autoPlayCue', document.getElementById('autoplay-toggle').checked);
-    }
-
-    function saveListenAfterCuePreference() {
-        localStorage.setItem('listenAfterCue', document.getElementById('listen-after-cue-toggle').checked);
-    }
-
-    function toggleSettings() { document.getElementById('settings-tray').classList.toggle('hidden'); }
-    function hideAll() {
-        ['home-view', 'create-view', 'entry-view', 'script-import-view', 'practice-view', 'scene-modal'].forEach(id => document.getElementById(id).classList.add('hidden'));
-        stopSpeaking();
-        stopListening();
-    }
-    function closeModal() { document.getElementById('scene-modal').classList.add('hidden'); }
-    function showHome() { hideAll(); document.getElementById('home-view').classList.remove('hidden'); renderHome(); }
-    function showNewProduction() { hideAll(); document.getElementById('create-view').classList.remove('hidden'); }
-
-    function showEntryView(index) {
-        currentProdIndex = index;
-        editingIndex = null;
-        hideAll();
-        document.getElementById('entry-view').classList.remove('hidden');
-        document.getElementById('entry-title').innerText = productions[index].title;
-        document.getElementById('entry-role').innerText = productions[index].role;
-        renderLines();
-    }
-
-    // new: never graded; learning: graded but not yet KNOWN_STREAK right in a row; known
-    function lineStatus(l) {
-        if (l.type !== 'line' || !l.stats || !(l.stats.right + l.stats.wrong)) return 'new';
-        return l.stats.streak >= KNOWN_STREAK ? 'known' : 'learning';
-    }
-
-    function renderProgress() {
-        const lines = productions[currentProdIndex].lines.filter(l => l.type === 'line');
-        const count = status => lines.filter(l => lineStatus(l) === status).length;
-        const el = document.getElementById('entry-progress');
-        if (!lines.length) { el.innerHTML = ''; return; }
-        el.innerHTML = `<span><span class="status-dot known" style="display:inline-block"></span> ${count('known')} known</span>
-            <span><span class="status-dot learning" style="display:inline-block"></span> ${count('learning')} learning</span>
-            <span><span class="status-dot" style="display:inline-block"></span> ${count('new')} new</span>
-            ${lines.some(l => l.stats) ? '<button class="link-button" onclick="resetProgress()">Reset progress</button>' : ''}`;
-    }
-
-    function resetProgress() {
-        if (!confirm('Reset progress for every line in this production?')) return;
-        productions[currentProdIndex].lines.forEach(l => delete l.stats);
-        syncData(); renderLines();
-    }
-
-    function saveProduction() {
-        const title = document.getElementById('prod-title').value;
-        const role = document.getElementById('prod-role').value;
-        if (!title || !role) return;
-        productions.push({ title, role, lines: [] });
-        syncData();
-        document.getElementById('prod-title').value = '';
-        document.getElementById('prod-role').value = '';
-        showHome();
-    }
-
-    function addLine() {
-        const cue = document.getElementById('line-cue').value.trim();
-        const text = document.getElementById('line-text').value.trim();
-        if (!text) return;
-        productions[currentProdIndex].lines.push({ type: 'line', cue, text });
-        syncData();
-        document.getElementById('line-cue').value = '';
-        document.getElementById('line-text').value = '';
-        renderLines();
-    }
-
-    function addSceneBreak() {
-        const name = document.getElementById('scene-name').value.trim();
-        if (!name) return;
-        productions[currentProdIndex].lines.push({ type: 'break', text: name });
-        syncData();
-        document.getElementById('scene-name').value = '';
-        renderLines();
-    }
-
-    function syncData() { localStorage.setItem('offBookData', JSON.stringify(productions)); }
-
-    function renderHome() {
-        const list = document.getElementById('production-list');
-        list.innerHTML = productions.length ? productions.map((p, i) => `
-            <div class="production-item" onclick="showEntryView(${i})">
-                <div><strong>${esc(p.title)}</strong><br><small>${esc(p.role)} • ${p.lines.filter(l=>l.type==='line').length} lines • ${p.lines.filter(l => lineStatus(l) === 'known').length} known</small></div>
-                <button class="secondary" onclick="event.stopPropagation(); if(confirm('Delete?')){productions.splice(${i},1); syncData(); renderHome();}">Delete</button>
-            </div>`).join('') : '<div class="empty-state">No productions.</div>';
-    }
-
-    function renderLines() {
-        renderProgress();
-        const list = document.getElementById('current-lines-list');
-        list.innerHTML = `<h3 style="margin-top:10px">Script Structure</h3>`;
-        const container = document.createElement('div');
-        container.id = "drag-container";
-
-        productions[currentProdIndex].lines.forEach((l, i) => {
-            const item = document.createElement('div');
-            item.className = `line-item ${l.type === 'break' ? 'scene-break' : ''}`;
-            item.dataset.index = i;
-
-            if (i === editingIndex) {
-                item.classList.add('editing');
-                const fields = l.type === 'break'
-                    ? `<label>Scene Heading</label><input type="text" id="edit-scene" value="${esc(l.text)}">`
-                    : `<label>The Cue</label><textarea id="edit-cue" rows="2">${esc(l.cue)}</textarea>
-                       <label>Your Line</label><textarea id="edit-text" rows="3">${esc(l.text)}</textarea>`;
-                item.innerHTML = `${fields}<div class="edit-actions"><button onclick="saveEdit(${i})">Save</button><button class="secondary" onclick="cancelEdit()">Cancel</button></div>`;
-                container.appendChild(item);
-                return;
-            }
-
-            if (l.type === 'break') {
-                item.innerHTML = `<div class="handle">⠿</div><div class="line-content break-text" onclick="editItem(${i})">🎬 ${esc(l.text)}</div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
-            } else {
-                item.innerHTML = `<div class="handle">⠿</div><span class="status-dot ${lineStatus(l)}" title="${lineStatus(l)}"></span><div class="line-content" onclick="editItem(${i})" title="Tap to edit"><div class="cue-preview">Cue: "${esc(l.cue || '(you start)')}"</div><div>${esc(l.text)}</div></div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
-            }
-            const handle = item.querySelector('.handle');
-            handle.addEventListener('pointerdown', e => startDrag(e, item, container));
-            container.appendChild(item);
-        });
-
-        list.appendChild(container);
-    }
-
-    function editItem(index) {
-        editingIndex = index;
-        renderLines();
-        const field = document.getElementById('edit-text') || document.getElementById('edit-scene');
-        if (field) field.focus();
-    }
-
-    function cancelEdit() { editingIndex = null; renderLines(); }
-
-    function saveEdit(index) {
-        const l = productions[currentProdIndex].lines[index];
-        if (l.type === 'break') {
-            const name = document.getElementById('edit-scene').value.trim();
-            if (!name) return;
-            l.text = name;
-        } else {
-            const text = document.getElementById('edit-text').value.trim();
-            if (!text) return;
-            l.cue = document.getElementById('edit-cue').value.trim();
-            // A changed line has to be learned again
-            if (text !== l.text) delete l.stats;
-            l.text = text;
-        }
-        editingIndex = null;
-        syncData(); renderLines();
-    }
-
-    // Pointer events (not HTML5 drag-and-drop) so reordering works with touch as well as a mouse
-    function startDrag(e, item, container) {
-        if (editingIndex !== null) return;
-        e.preventDefault();
-        const handle = e.currentTarget;
-        handle.setPointerCapture(e.pointerId);
-        item.classList.add('dragging');
-
-        const move = ev => {
-            moveBefore(container, item, getDragAfterElement(container, ev.clientY));
-            if (ev.clientY < 60) window.scrollBy(0, -12);
-            else if (ev.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
-        };
-        const end = () => {
-            handle.removeEventListener('pointermove', move);
-            handle.removeEventListener('pointerup', end);
-            handle.removeEventListener('pointercancel', end);
-            item.classList.remove('dragging');
-            saveNewOrder();
-        };
-        handle.addEventListener('pointermove', move);
-        handle.addEventListener('pointerup', end);
-        handle.addEventListener('pointercancel', end);
-    }
-
-    // Moves the siblings around `item` rather than `item` itself: detaching the
-    // dragged element from the DOM would release its pointer capture mid-drag.
-    function moveBefore(container, item, after) {
-        if (after === item) return;
-        const kids = [...container.children];
-        const from = kids.indexOf(item);
-        const to = after ? kids.indexOf(after) : kids.length;
-        if (to > from) {
-            for (let k = from + 1; k < to; k++) container.insertBefore(kids[k], item);
-        } else {
-            const ref = item.nextSibling;
-            for (let k = to; k < from; k++) container.insertBefore(kids[k], ref);
-        }
-    }
-
-    function getDragAfterElement(container, y) {
-        const elements = [...container.querySelectorAll('.line-item:not(.dragging)')];
-        return elements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
-            else return closest;
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    function saveNewOrder() {
-        const items = [...document.querySelectorAll('.line-item')];
-        productions[currentProdIndex].lines = items.map(item => productions[currentProdIndex].lines[item.dataset.index]);
-        syncData(); renderLines();
-    }
-
-    function deleteItem(index) {
-        if (confirm("Remove?")) { productions[currentProdIndex].lines.splice(index, 1); editingIndex = null; syncData(); renderLines(); }
-    }
-
-    function handlePracticeInOrder() {
-        const allLines = productions[currentProdIndex].lines;
-        if (allLines.some(l => l.type === 'break')) {
-            const dropdown = document.getElementById('scene-select-dropdown');
-            dropdown.innerHTML = allLines.map((l, i) => l.type === 'break' ? `<option value="${i}">${esc(l.text)}</option>` : '').join('');
-            document.getElementById('scene-modal').classList.remove('hidden');
-        } else startPractice(false);
-    }
-
-    function startPracticeWithScene() {
-        startPractice(false, Number(document.getElementById('scene-select-dropdown').value));
-    }
-
-    function shuffle(arr) {
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-        return arr;
-    }
-
-    // sceneStart is the index of a scene break; practice runs from it to the next break
-    function startPractice(randomize, sceneStart = null) {
-        const allLines = productions[currentProdIndex].lines;
-        let lineSet = [];
-        if (sceneStart !== null) {
-            for (let i = sceneStart + 1; i < allLines.length && allLines[i].type !== 'break'; i++) lineSet.push(allLines[i]);
-        } else lineSet = allLines.filter(l => l.type === 'line');
-
-        if (!lineSet.length) return alert("No lines found.");
-        beginSession(randomize ? shuffle(lineSet) : lineSet, randomize ? 'random' : 'order', () => startPractice(randomize, sceneStart));
-    }
-
-    function startTricky() {
-        const lines = productions[currentProdIndex].lines.filter(l => l.type === 'line' && lineStatus(l) !== 'known');
-        if (!lines.length) return alert(productions[currentProdIndex].lines.some(l => l.type === 'line') ? "You know all your lines! 🎉" : "No lines found.");
-        beginSession(lines, 'tricky', startTricky);
-    }
-
-    function practiceMissed() {
-        const missed = [...sessionResults].filter(([, got]) => !got).map(([line]) => line);
-        beginSession(missed, 'tricky', sessionStart);
-    }
-
-    function restartSession() { sessionStart(); }
-
-    function beginSession(lines, mode, start) {
-        practiceLines = [...lines];
-        practiceIndex = 0;
-        sessionMode = mode;
-        sessionStart = start;
-        sessionResults = new Map();
-        hideAll();
-        document.getElementById('practice-view').classList.remove('hidden');
-        document.getElementById('practice-card').classList.remove('hidden');
-        document.getElementById('practice-nav').classList.remove('hidden');
-        document.getElementById('session-summary').classList.add('hidden');
-        document.getElementById('practice-title').innerText = productions[currentProdIndex].title;
-        document.getElementById('practice-role').innerText = productions[currentProdIndex].role;
-        showCurrentFlashcard();
-    }
-
-    function sceneOf(line) {
-        const lines = productions[currentProdIndex].lines;
-        for (let i = lines.indexOf(line); i >= 0; i--) if (lines[i].type === 'break') return lines[i].text;
-        return '';
-    }
-
-    function showCurrentFlashcard() {
-        stopSpeaking();
-        stopListening();
-        const current = practiceLines[practiceIndex];
-        card = { hints: 0, grade: null, statsBefore: current.stats && { ...current.stats }, requeued: false };
-        const sceneDisplay = document.getElementById('current-scene-display');
-        const currentScene = sceneOf(current);
-
-        if (currentScene) { sceneDisplay.innerText = currentScene; sceneDisplay.classList.remove('hidden'); }
-        else sceneDisplay.classList.add('hidden');
-
-        document.getElementById('display-cue').innerText = current.cue || '(You speak first)';
-        document.getElementById('display-line').innerText = current.text;
-        document.getElementById('line-reveal-section').classList.add('hidden');
-        document.getElementById('reveal-hint').classList.remove('hidden');
-        document.getElementById('heard-text').innerText = '';
-        document.getElementById('hint-text').classList.add('hidden');
-        document.getElementById('hint-btn').innerText = '💡 Hint';
-        setCheckResult('', '');
-        showGrade();
-
-        if (document.getElementById('autoplay-toggle').checked) speakCue();
-    }
-
-    function revealLine() {
-        document.getElementById('line-reveal-section').classList.remove('hidden');
-        document.getElementById('reveal-hint').classList.add('hidden');
-        document.getElementById('hint-text').classList.add('hidden');
-    }
-
-    const firstLetters = word => word.replace(/(\p{L})[\p{L}\p{M}'’]*/gu, '$1');
-
-    // Each tap shows a little more: first the first letter of every word, then one more whole word at a time
-    function showHint() {
-        const words = practiceLines[practiceIndex].text.split(/\s+/).filter(Boolean);
-        card.hints++;
-        const whole = card.hints - 1;
-        if (whole >= words.length) return revealLine();
-        const el = document.getElementById('hint-text');
-        el.innerText = words.map((w, i) => i < whole ? w : firstLetters(w)).join(' ');
-        el.classList.remove('hidden');
-        document.getElementById('reveal-hint').classList.add('hidden');
-        document.getElementById('hint-btn').innerText = '💡 More';
-    }
-
-    function showGrade() {
-        document.getElementById('grade-got').classList.toggle('picked-good', card.grade === true);
-        document.getElementById('grade-miss').classList.toggle('picked-miss', card.grade === false);
-    }
-
-    // Records how the line went. Grading the same card again replaces the earlier grade.
-    // Buttons move on to the next card; the 🎤 check grades without moving on.
-    function gradeLine(got, advance = true) {
-        const line = practiceLines[practiceIndex];
-        const s = { right: 0, wrong: 0, streak: 0, ...card.statsBefore };
-        if (got) { s.right++; if (!card.hints) s.streak++; }
-        else { s.wrong++; s.streak = 0; }
-        line.stats = s;
-        card.grade = got;
-        sessionResults.set(line, got);
-        syncData();
-
-        // In shuffled sessions a missed line comes back a few cards later
-        if (!got && sessionMode !== 'order' && !card.requeued) {
-            practiceLines.splice(Math.min(practiceIndex + 4, practiceLines.length), 0, line);
-            card.requeued = true;
-        }
-        showGrade();
-        if (advance) nextLine();
-    }
-
-    function nextLine() {
-        if (practiceIndex + 1 < practiceLines.length) { practiceIndex++; showCurrentFlashcard(); }
-        else showSummary();
-    }
-
-    function prevLine() {
-        if (practiceIndex > 0) { practiceIndex--; showCurrentFlashcard(); }
-    }
-
-    function showSummary() {
-        stopSpeaking();
-        stopListening();
-        const results = [...sessionResults.values()];
-        const got = results.filter(Boolean).length, missed = results.length - got;
-        const lines = productions[currentProdIndex].lines.filter(l => l.type === 'line');
-        const known = lines.filter(l => lineStatus(l) === 'known').length;
-        document.getElementById('summary-text').innerHTML = results.length
-            ? `<p class="check-result good">✓ ${got} got it</p><p class="check-result miss">✗ ${missed} missed</p><p class="hint">${known} of ${lines.length} lines known</p>`
-            : '<p class="hint">Grade your lines with ✓ Got it or ✗ Missed it to track what you know.</p>';
-        document.getElementById('summary-missed-btn').classList.toggle('hidden', !missed);
-        document.getElementById('practice-card').classList.add('hidden');
-        document.getElementById('practice-nav').classList.add('hidden');
-        document.getElementById('current-scene-display').classList.add('hidden');
-        document.getElementById('session-summary').classList.remove('hidden');
-    }
-
-    function stopSpeaking() {
-        currentUtterance = null;
-        synth.cancel();
-        player.onended = null;
-        player.pause();
-    }
-
-    // A tiny silent WAV, played on the first tap so iOS allows later programmatic playback
-    function unlockAudio() {
-        const samples = 800, buf = new ArrayBuffer(44 + samples * 2), v = new DataView(buf);
-        const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
-        str(0, 'RIFF'); v.setUint32(4, 36 + samples * 2, true); str(8, 'WAVEfmt ');
-        v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-        v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-        str(36, 'data'); v.setUint32(40, samples * 2, true);
-        player.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
-        player.play().catch(() => {});
-    }
-
-    async function sha256(text) {
-        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-        return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    // Natural-voice audio for a cue: from this device's cache if it's been played or
-    // downloaded before, otherwise from the Worker (which has its own shared cache).
-    async function getCloudAudio(voice, text) {
-        const key = new Request(`https://voice-cache.invalid/${voice}/${await sha256(text)}`);
-        const cache = await caches.open(VOICE_CACHE);
-        const hit = await cache.match(key);
-        if (hit) return hit.blob();
-
-        const res = await fetch(SPEAK_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Passcode': getPasscode() },
-            body: JSON.stringify({ voice, text })
-        });
-        if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            const err = new Error(data.error || `Request failed (${res.status})`);
-            err.status = res.status;
-            err.code = data.code;
-            throw err;
-        }
-        const blob = await res.blob();
-        await cache.put(key, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg' } }));
-        return blob;
-    }
-
-    function voiceError(e) {
-        if (e.status === 401) return 'Wrong passcode for natural voices. Check ⚙️ Settings.';
-        if (e.code === 'daily-limit') return "Natural voices have reached today's limit. Cues you've already heard still work.";
-        if (e.status) return e.message;
-        return "You're offline. Download cues in ⚙️ Settings to use natural voices offline.";
-    }
-
-    async function speakCue() {
-        stopSpeaking();
-        stopListening();
-        const listenAfter = SpeechRec && document.getElementById('listen-after-cue-toggle').checked;
-        const cue = practiceLines[practiceIndex].cue;
-        if (!cue) { if (listenAfter) startListening(); return; }
-
-        // Stopping speech clears this token, so a cue that finishes (or finishes loading) late is ignored
-        const token = {};
-        currentUtterance = token;
-        const done = () => { if (currentUtterance === token && listenAfter) startListening(); };
-        const rate = Number(document.getElementById('voice-rate').value);
-        const choice = selectedVoice();
-
-        if (choice.cloud) {
-            try {
-                const blob = await getCloudAudio(choice.cloud, cue);
-                if (currentUtterance !== token) return;
-                if (player.src.startsWith('blob:')) URL.revokeObjectURL(player.src);
-                player.src = URL.createObjectURL(blob);
-                player.playbackRate = rate;
-                player.onended = done;
-                await player.play();
-                document.getElementById('heard-text').innerText = '';
-                return;
-            } catch (e) {
-                if (currentUtterance !== token) return;
-                if (e.status === 401) setPasscode('');
-                document.getElementById('heard-text').innerText = e.name === 'NotAllowedError'
-                    ? 'Tap 🔊 Listen to hear the cue.'
-                    : `${voiceError(e)} Using the device voice for now.`;
-                if (e.name === 'NotAllowedError') return;
-            }
-        }
-
-        const utterance = new SpeechSynthesisUtterance(cue);
-        const voice = choice.device || bestDeviceVoice;
-        if (voice) utterance.voice = voice;
-        utterance.rate = rate;
-        utterance.pitch = choice.device ? document.getElementById('voice-pitch').value : 1;
-        utterance.onend = done;
-        synth.speak(utterance);
-    }
-
-    // Fetches every cue in the production so practice works offline and without waiting
-    async function downloadVoices() {
-        const voice = selectedVoice().cloud;
-        const status = document.getElementById('voice-download-status');
-        if (!voice) return;
-        if (!getPasscode()) { status.innerText = 'Enter the passcode first.'; return; }
-        const cues = [...new Set(productions[currentProdIndex].lines.filter(l => l.type === 'line' && l.cue).map(l => l.cue))];
-        if (!cues.length) { status.innerText = 'No cues to download.'; return; }
-
-        let next = 0, done = 0, failure = null;
-        status.innerText = `Downloading… 0 of ${cues.length}`;
-        await Promise.all(Array.from({ length: 4 }, async () => {
-            while (next < cues.length && !failure) {
-                const cue = cues[next++];
-                try { await getCloudAudio(voice, cue); }
-                catch (e) {
-                    // Brief rate limits just mean waiting; anything else stops the download
-                    if (e.code === 'rate') { next--; await new Promise(r => setTimeout(r, 10000)); continue; }
-                    failure = e;
-                    break;
-                }
-                status.innerText = `Downloading… ${++done} of ${cues.length}`;
-            }
-        }));
-        if (failure?.status === 401) setPasscode('');
-        status.innerText = failure
-            ? `${voiceError(failure)} ${done} of ${cues.length} cues downloaded; try again to get the rest.`
-            : `All ${cues.length} cues are ready, including offline.`;
-    }
-
-    // --- Speech check: listen to the actor and compare against the script ---
-
-    const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
-        'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
-
-    function normalizeWord(w) {
-        w = w.toLowerCase().replace(/[’']/g, '').replace(/[^\p{L}\p{N}]/gu, '');
-        return NUMBER_WORDS[Number(w)] && /^\d+$/.test(w) ? NUMBER_WORDS[Number(w)] : w;
-    }
-
-    const splitWords = s => s.split(/[\s\-–—]+/).map(normalizeWord).filter(Boolean);
-
-    function editDistance(a, b) {
-        const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
-        for (let j = 1; j <= b.length; j++) d[0][j] = j;
-        for (let i = 1; i <= a.length; i++)
-            for (let j = 1; j <= b.length; j++)
-                d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
-        return d[a.length][b.length];
-    }
-
-    // Recognizers often mis-hear a letter or two in longer words, so allow one edit there
-    const wordsMatch = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && editDistance(a, b) <= 1);
-
-    // Aligns heard words to the script (longest common subsequence) and reports,
-    // for each whitespace-separated word of the script, whether it was said.
-    function checkLine(expected, heard) {
-        const tokens = expected.split(/\s+/).filter(Boolean).map(t => ({ display: t, words: splitWords(t) }));
-        const exp = [];
-        tokens.forEach((t, ti) => t.words.forEach(w => exp.push({ w, ti })));
-        const got = splitWords(heard);
-
-        const n = exp.length, m = got.length;
-        const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
-        for (let i = n - 1; i >= 0; i--)
-            for (let j = m - 1; j >= 0; j--)
-                L[i][j] = wordsMatch(exp[i].w, got[j]) ? L[i+1][j+1] + 1 : Math.max(L[i+1][j], L[i][j+1]);
-
-        const matched = new Array(n).fill(false);
-        for (let i = 0, j = 0; i < n && j < m; ) {
-            if (wordsMatch(exp[i].w, got[j]) && L[i][j] === L[i+1][j+1] + 1) { matched[i] = true; i++; j++; }
-            else if (L[i+1][j] >= L[i][j+1]) i++;
-            else j++;
-        }
-
-        const tokenMissed = tokens.map(() => false);
-        exp.forEach((e, i) => { if (!matched[i]) tokenMissed[e.ti] = true; });
-        const hits = matched.filter(Boolean).length;
-        return {
-            tokens: tokens.map((t, i) => ({ display: t.display, missed: tokenMissed[i] })),
-            total: n,
-            hits,
-            complete: n > 0 && hits === n
-        };
-    }
-
-    function setCheckResult(text, kind) {
-        const el = document.getElementById('check-result');
-        el.innerText = text;
-        el.className = `check-result ${kind}`;
-    }
-
-    function setMicButton(listening) {
-        const btn = document.getElementById('mic-btn');
-        btn.classList.toggle('listening', listening);
-        btn.innerText = listening ? '⏹ Done' : '🎤 Say It';
-    }
-
-    function toggleListening() {
-        if (recognition) recognition.stop();
-        else startListening();
-    }
-
-    function startListening() {
-        if (!SpeechRec) return;
-        stopSpeaking();
-        stopListening();
-
-        const expected = practiceLines[practiceIndex].text;
-        const heardEl = document.getElementById('heard-text');
-        const rec = new SpeechRec();
-        rec.lang = navigator.language || 'en-US';
-        rec.continuous = true;
-        rec.interimResults = true;
-        lastHeard = '';
-
-        rec.onresult = e => {
-            lastHeard = [...e.results].map(r => r[0].transcript).join(' ');
-            heardEl.innerText = `“${lastHeard.trim()}”`;
-            if (checkLine(expected, lastHeard).complete) rec.stop();
-        };
-        rec.onerror = e => {
-            if (e.error === 'not-allowed' || e.error === 'service-not-allowed') heardEl.innerText = 'Microphone access is blocked. Allow it in your browser settings to use 🎤.';
-            else if (e.error === 'no-speech') heardEl.innerText = "Didn't hear anything. Tap 🎤 to try again.";
-        };
-        rec.onend = () => {
-            if (recognition !== rec) return;
-            recognition = null;
-            setMicButton(false);
-            if (lastHeard.trim()) showCheck(expected, lastHeard);
-            else if (heardEl.innerText === 'Listening…') heardEl.innerText = "Didn't hear anything. Tap 🎤 to try again.";
-        };
-
-        recognition = rec;
-        setMicButton(true);
-        heardEl.innerText = 'Listening…';
-        try { rec.start(); }
-        catch { recognition = null; setMicButton(false); heardEl.innerText = "Couldn't start the microphone. Try again."; }
-    }
-
-    function stopListening() {
-        if (!recognition) return;
-        const rec = recognition;
-        recognition = null;
-        rec.abort();
-        setMicButton(false);
-    }
-
-    function showCheck(expected, heard) {
-        const result = checkLine(expected, heard);
-        document.getElementById('display-line').innerHTML = result.tokens
-            .map(t => t.missed ? `<span class="word-missed">${esc(t.display)}</span>` : esc(t.display)).join(' ');
-        const missed = result.total - result.hits;
-        if (result.complete) setCheckResult('🎉 Perfect!', 'good');
-        else if (result.hits / result.total >= 0.8) setCheckResult(`👍 Close! ${missed} word${missed === 1 ? '' : 's'} missed`, 'good');
-        else setCheckResult(`Keep at it: ${result.hits} of ${result.total} words`, 'miss');
-        revealLine();
-        gradeLine(result.complete, false);
-    }
-
-    // --- CSV import / export ---
-    // Columns: Cue, Line, and optional Scene (the scene heading each line belongs to).
-    // Two-column Cue,Line files from earlier versions still import.
-
-    function parseCSV(text) {
-        const rows = [];
-        let row = [], field = '', inQuotes = false;
-        text = text.replace(/^\uFEFF/, '');
-        for (let i = 0; i < text.length; i++) {
-            const c = text[i];
-            if (inQuotes) {
-                if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
-                else if (c === '"') inQuotes = false;
-                else field += c;
-            } else if (c === '"') inQuotes = true;
-            else if (c === ',') { row.push(field); field = ''; }
-            else if (c === '\n' || c === '\r') {
-                if (c === '\r' && text[i + 1] === '\n') i++;
-                row.push(field); rows.push(row); row = []; field = '';
-            } else field += c;
-        }
-        if (field || row.length) { row.push(field); rows.push(row); }
-        return rows;
-    }
-
-    function exportToCSV() {
-        const csvField = v => `"${String(v).replace(/"/g, '""')}"`;
-        const rows = [['Cue', 'Line', 'Scene']];
-        let scene = '', sceneHasLines = true;
-        productions[currentProdIndex].lines.forEach(l => {
-            if (l.type === 'break') {
-                if (!sceneHasLines) rows.push(['', '', scene]);
-                scene = l.text; sceneHasLines = false;
-            } else {
-                rows.push([l.cue, l.text, scene]); sceneHasLines = true;
-            }
-        });
-        if (!sceneHasLines) rows.push(['', '', scene]);
-
-        const csv = rows.map(r => r.map(csvField).join(',')).join('\n');
-        const a = document.createElement('a');
-        a.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-        a.download = `${productions[currentProdIndex].title.replace(/[\\/:*?"<>|]/g, '')}.csv`;
-        a.click();
-    }
-
-    function importFromCSV(event) {
-        const input = event.target;
-        const file = input.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-            const rows = parseCSV(e.target.result);
-            const header = (rows[0] || []).map(h => h.trim().toLowerCase());
-            let col = { cue: header.indexOf('cue'), line: header.findIndex(h => h === 'line' || h === 'your line'), scene: header.indexOf('scene') };
-            if (col.cue !== -1 && col.line !== -1) rows.shift();
-            else col = { cue: 0, line: 1, scene: 2 };
-
-            const count = appendRows(rows.map(row => ({
-                scene: col.scene !== -1 ? row[col.scene] : '',
-                cue: row[col.cue],
-                line: row[col.line]
-            })));
-            input.value = '';
-            alert(`Imported ${count} line${count === 1 ? '' : 's'}.`);
-        };
-        reader.readAsText(file);
-    }
-
-    // Appends {scene, cue, line} rows to the current production, adding a scene break
-    // wherever the scene changes. Returns the number of lines added.
-    function appendRows(rows) {
-        const lines = productions[currentProdIndex].lines;
-        let scene = '', count = 0;
-        rows.forEach(r => {
-            const rowScene = (r.scene || '').trim();
-            if (rowScene && rowScene !== scene) { lines.push({ type: 'break', text: rowScene }); scene = rowScene; }
-            const cue = (r.cue || '').trim();
-            const text = (r.line || '').trim();
-            if (text) { lines.push({ type: 'line', cue, text }); count++; }
-        });
-        syncData(); renderLines();
-        return count;
-    }
-
-    // --- Import from script (AI) ---
-
-    function showScriptImport() {
-        hideAll();
-        document.getElementById('script-import-view').classList.remove('hidden');
-        document.getElementById('ai-character').value = productions[currentProdIndex].role;
-        document.getElementById('ai-passcode').value = getPasscode();
-        document.getElementById('ai-status').innerText = '';
-        document.getElementById('ai-review').classList.add('hidden');
-        extracted = [];
-    }
-
-    let pdfjsPromise = null;
-    function loadPdfJs() {
-        pdfjsPromise ??= import(PDFJS + 'pdf.min.mjs').then(pdfjs => {
-            // Browsers won't start a module worker straight from another origin, so wrap it in a same-origin blob
-            const shim = URL.createObjectURL(new Blob([`import "${PDFJS}pdf.worker.min.mjs";`], { type: 'text/javascript' }));
-            pdfjs.GlobalWorkerOptions.workerPort = new Worker(shim, { type: 'module' });
-            return pdfjs;
-        });
-        return pdfjsPromise;
-    }
-
-    function canvasToJpeg(canvas) { return canvas.toDataURL('image/jpeg', 0.8); }
-
-    async function imageFileToDataUrl(file) {
-        const bitmap = await createImageBitmap(file);
-        const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(bitmap.width * scale);
-        canvas.height = Math.round(bitmap.height * scale);
-        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-        return canvasToJpeg(canvas);
-    }
-
-    // Turns the chosen files into pages: text where the PDF has real text, images for scans and photos
-    async function preparePages(files, status) {
-        const pages = [];
-        for (const file of files) {
-            if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
-                const pdfjs = await loadPdfJs();
-                const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
-                for (let n = 1; n <= doc.numPages; n++) {
-                    status(`Reading ${file.name}: page ${n} of ${doc.numPages}…`);
-                    const page = await doc.getPage(n);
-                    const content = await page.getTextContent();
-                    const text = content.items.map(i => (i.str || '') + (i.hasEOL ? '\n' : '')).join('');
-                    if (text.replace(/\s/g, '').length > 40) { pages.push({ text: `[Page ${n}]\n${text}` }); continue; }
-                    const base = page.getViewport({ scale: 1 });
-                    const viewport = page.getViewport({ scale: 1600 / Math.max(base.width, base.height) });
-                    const canvas = document.createElement('canvas');
-                    canvas.width = viewport.width; canvas.height = viewport.height;
-                    await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport }).promise;
-                    pages.push({ image: canvasToJpeg(canvas) });
-                }
-            } else if (file.type.startsWith('image/')) {
-                status(`Preparing ${file.name}…`);
-                pages.push({ image: await imageFileToDataUrl(file) });
-            } else {
-                pages.push({ text: await file.text() });
-            }
-        }
-        return pages;
-    }
-
-    // Groups pages into requests small enough for the Worker and the model's output limit
-    function chunkPages(pages) {
-        const chunks = [];
-        let cur = null;
-        for (const p of pages) {
-            const kind = p.text !== undefined ? 'text' : 'image';
-            const size = (p.text || p.image).length;
-            if (!cur || cur.kind !== kind || cur.pages.length >= (kind === 'text' ? 40 : 4) || cur.size + size > (kind === 'text' ? 40000 : 6000000)) {
-                cur = { kind, pages: [], size: 0 };
-                chunks.push(cur);
-            }
-            cur.pages.push(p); cur.size += size;
-        }
-        // Give each text chunk the end of the text before it, so its first cue can be found
-        chunks.forEach((c, i) => {
-            const prev = chunks[i - 1];
-            c.context = prev && prev.kind === 'text' ? prev.pages.map(p => p.text).join('\n').slice(-1500) : '';
-        });
-        return chunks;
-    }
-
-    async function requestLines(chunk, form) {
-        const res = await fetch(EXTRACT_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Passcode': form.passcode },
-            body: JSON.stringify({ ...form.params, context: chunk.context, pages: chunk.pages })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            const err = new Error(data.error || `Request failed (${res.status})`);
-            err.status = res.status;
-            throw err;
-        }
-        return data;
-    }
-
-    async function runScriptImport() {
-        const statusEl = document.getElementById('ai-status');
-        const status = msg => { statusEl.innerText = msg; };
-        const btn = document.getElementById('ai-extract-btn');
-        const files = [...document.getElementById('ai-files').files];
-        const character = document.getElementById('ai-character').value.trim();
-        const passcode = document.getElementById('ai-passcode').value.trim();
-        if (!character) return status('Enter your character name.');
-        if (!files.length) return status('Choose the script file or photos.');
-        if (!passcode) return status('Enter the passcode.');
-
-        const form = {
-            passcode,
-            params: {
-                character,
-                aliases: document.getElementById('ai-aliases').value.split(',').map(s => s.trim()).filter(Boolean),
-                includeGroup: document.getElementById('ai-include-group').checked
-            }
-        };
-
-        btn.disabled = true;
-        document.getElementById('ai-review').classList.add('hidden');
-        try {
-            const chunks = chunkPages(await preparePages(files, status));
-            let done = 0, truncated = false;
-            status(`Finding your lines… (0 of ${chunks.length} sections)`);
-            const results = new Array(chunks.length);
-            // A few requests at a time: faster than one by one, and well under the Worker's rate limit
-            let next = 0;
-            await Promise.all(Array.from({ length: Math.min(3, chunks.length) }, async () => {
-                while (next < chunks.length) {
-                    const i = next++;
-                    const data = await requestLines(chunks[i], form);
-                    results[i] = data.lines;
-                    truncated ||= data.truncated;
-                    status(`Finding your lines… (${++done} of ${chunks.length} sections)`);
-                }
-            }));
-
-            setPasscode(passcode);
-            // A section that starts mid-scene comes back without a heading; carry the previous one forward
-            let scene = '';
-            extracted = results.flat().map(l => { scene = l.scene || scene; return { ...l, scene }; });
-            if (!extracted.length) return status(`No lines found for ${character}. Check the name matches the script.`);
-            status(`Found ${extracted.length} line${extracted.length === 1 ? '' : 's'}.` + (truncated ? ' Some sections were too long and may be missing lines at the end; try fewer pages at a time.' : ''));
-            renderExtracted();
-        } catch (e) {
-            if (e.status === 401) setPasscode('');
-            status(e.message || 'Something went wrong. Try again.');
-        } finally {
-            btn.disabled = false;
-        }
-    }
-
-    function renderExtracted() {
-        const list = document.getElementById('ai-results');
-        let scene = null;
-        list.innerHTML = extracted.map((l, i) => {
-            const heading = l.scene !== scene ? `<div class="review-scene">🎬 ${esc(l.scene || 'No scene heading')}</div>` : '';
-            scene = l.scene;
-            return `${heading}<div class="review-item">
-                <div class="review-head"><label>The Cue</label><button class="delete-line" onclick="removeExtracted(${i})">×</button></div>
-                <textarea rows="2" oninput="extracted[${i}].cue = this.value">${esc(l.cue)}</textarea>
-                <label>Your Line</label>
-                <textarea rows="3" oninput="extracted[${i}].line = this.value">${esc(l.line)}</textarea>
-            </div>`;
-        }).join('');
-        document.getElementById('ai-review').classList.remove('hidden');
-    }
-
-    function removeExtracted(i) { extracted.splice(i, 1); renderExtracted(); }
-
-    function addExtractedLines() {
-        const count = appendRows(extracted);
-        showEntryView(currentProdIndex);
-        alert(`Added ${count} line${count === 1 ? '' : 's'}.`);
-    }
-
-    init();
-</script>
+<!-- Bottom sheets -->
+<div id="sheet-backdrop" class="backdrop hidden" onclick="closeSheet()"></div>
+
+<div id="sheet-practice" class="sheet hidden" role="dialog" aria-label="Practice">
+    <div class="sheet-handle"></div>
+    <h2>Practice</h2>
+    <label>Which scene?</label>
+    <div id="practice-scenes" class="choice-list"></div>
+    <label>How?</label>
+    <div id="practice-how" class="segmented">
+        <button data-how="order" onclick="pickHow('order')">In order</button>
+        <button data-how="shuffle" onclick="pickHow('shuffle')">Shuffle</button>
+        <button data-how="tricky" onclick="pickHow('tricky')">Tricky ones</button>
+    </div>
+    <p id="how-hint" class="how-hint"></p>
+    <button class="btn primary big" onclick="startFromSheet()">Start</button>
+</div>
+
+<div id="sheet-settings" class="sheet hidden" role="dialog" aria-label="Settings">
+    <div class="sheet-handle"></div>
+    <h2>Settings</h2>
+    <div class="switch-row speech-only">
+        <label for="handsfree-toggle">Hands-free<small>Plays the cue, listens for your line, and moves on when you get it right</small></label>
+        <span class="switch"><input type="checkbox" id="handsfree-toggle" onchange="saveHandsFree()"><span onclick="this.previousElementSibling.click()"></span></span>
+    </div>
+    <label for="voice-select">Cue voice</label>
+    <select id="voice-select" onchange="saveVoicePreference()"></select>
+    <div id="voice-status" class="status"></div>
+    <div id="voice-passcode-field" class="hidden">
+        <label for="voice-passcode">Passcode for natural voices</label>
+        <input type="password" id="voice-passcode" autocomplete="off" onchange="setPasscode(this.value.trim()); prepareVoices()">
+    </div>
+    <label for="voice-rate">Cue speed</label>
+    <input type="range" id="voice-rate" min="0.6" max="1.6" step="0.1" value="1" onchange="localStorage.setItem('voiceRate', this.value)" style="width: 100%;">
+    <button class="btn secondary big" onclick="closeSheet()">Done</button>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<canvas id="confetti" class="confetti hidden"></canvas>
+
+<script src="app.js"></script>
 </body>
 </html>
