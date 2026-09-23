@@ -22,6 +22,7 @@
             --shadow: 0 2px 5px rgba(0,0,0,0.1);
             --good: #1a7f37;
             --miss: #d1242f;
+            --learning: #bf8700;
         }
 
         [data-theme="dark"] {
@@ -34,6 +35,7 @@
             --shadow: 0 4px 10px rgba(0,0,0,0.3);
             --good: #4ac26b;
             --miss: #ff6b6b;
+            --learning: #e3b341;
         }
 
         body {
@@ -200,6 +202,15 @@
         .check-result.good { color: var(--good); }
         .check-result.miss { color: var(--miss); }
         .word-missed { color: var(--miss); text-decoration: underline wavy; text-underline-offset: 4px; }
+        .hint-letters { margin-top: 12px; letter-spacing: 0.08em; color: #888; }
+        .grade-row { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+        .grade-row button.picked-good { background: var(--good); color: #fff; border-color: var(--good); }
+        .grade-row button.picked-miss { background: var(--miss); color: #fff; border-color: var(--miss); }
+        .status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--border); }
+        .status-dot.learning { background: var(--learning); }
+        .status-dot.known { background: var(--good); }
+        .progress-summary { font-size: 0.85rem; color: #888; margin-bottom: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .link-button { background: none; border: none; color: #888; text-decoration: underline; padding: 0; font-size: 0.8rem; }
 
         .settings-tray {
             background: var(--surface);
@@ -265,11 +276,13 @@
         <div class="top-nav">
             <button onclick="handlePracticeInOrder()">Practice: In Order</button>
             <button onclick="startPractice(true)">Practice: Random</button>
+            <button onclick="startTricky()">Practice: Tricky Lines</button>
             <button class="secondary" onclick="showHome()">← Back to Home</button>
         </div>
 
         <h2 id="entry-title"></h2>
         <div id="entry-role" class="role-badge"></div>
+        <div id="entry-progress" class="progress-summary"></div>
 
         <div class="card">
             <h3>Add to Script</h3>
@@ -357,16 +370,18 @@
             </div>
         </div>
 
-        <div class="card flashcard-area">
+        <div id="practice-card" class="card flashcard-area">
             <div onclick="revealLine()" style="cursor:pointer; width: 100%;">
                 <div class="label">The Cue</div>
                 <div id="display-cue" class="line-text"></div>
                 <div id="reveal-hint" class="hint">Say your line, then tap to check</div>
+                <div id="hint-text" class="line-text hint-letters hidden"></div>
             </div>
 
             <div class="card-actions">
                 <button class="secondary audio-btn" onclick="speakCue()">🔊 Listen</button>
                 <button id="mic-btn" class="secondary audio-btn speech-only" onclick="toggleListening()">🎤 Say It</button>
+                <button id="hint-btn" class="secondary audio-btn" onclick="showHint()">💡 Hint</button>
                 <button class="secondary audio-btn" onclick="revealLine()">👁 Show Line</button>
             </div>
             <div id="heard-text" class="heard"></div>
@@ -375,10 +390,23 @@
                 <div class="label">Your Line</div>
                 <div id="display-line" class="line-text"></div>
                 <div id="check-result" class="check-result"></div>
+                <div class="grade-row">
+                    <button id="grade-miss" class="secondary" onclick="gradeLine(false)">✗ Missed it</button>
+                    <button id="grade-got" class="secondary" onclick="gradeLine(true)">✓ Got it</button>
+                </div>
             </div>
         </div>
 
-        <div class="nav-controls">
+        <div id="session-summary" class="card hidden" style="text-align: center;">
+            <h3>Session Complete</h3>
+            <div id="summary-text"></div>
+            <div class="card-actions">
+                <button id="summary-missed-btn" onclick="practiceMissed()">Practice Missed Lines</button>
+                <button class="secondary" onclick="restartSession()">Start Over</button>
+            </div>
+        </div>
+
+        <div id="practice-nav" class="nav-controls">
             <button class="secondary" onclick="prevLine()">Previous</button>
             <button onclick="nextLine()">Next</button>
         </div>
@@ -407,6 +435,11 @@
     let practiceIndex = 0;
     let voices = [];
     let editingIndex = null;
+    let sessionMode = 'order';      // 'order', 'random' or 'tricky'
+    let sessionStart = null;        // how the session began, for Start Over
+    let sessionResults = new Map(); // line -> whether it was got right, last grade this session
+    let card = null;                // this card's hints used and grade
+    const KNOWN_STREAK = 3;         // correct in a row, without hints, for a line to count as known
     const synth = window.speechSynthesis;
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     let currentUtterance = null;
@@ -508,6 +541,29 @@
         renderLines();
     }
 
+    // new: never graded; learning: graded but not yet KNOWN_STREAK right in a row; known
+    function lineStatus(l) {
+        if (l.type !== 'line' || !l.stats || !(l.stats.right + l.stats.wrong)) return 'new';
+        return l.stats.streak >= KNOWN_STREAK ? 'known' : 'learning';
+    }
+
+    function renderProgress() {
+        const lines = productions[currentProdIndex].lines.filter(l => l.type === 'line');
+        const count = status => lines.filter(l => lineStatus(l) === status).length;
+        const el = document.getElementById('entry-progress');
+        if (!lines.length) { el.innerHTML = ''; return; }
+        el.innerHTML = `<span><span class="status-dot known" style="display:inline-block"></span> ${count('known')} known</span>
+            <span><span class="status-dot learning" style="display:inline-block"></span> ${count('learning')} learning</span>
+            <span><span class="status-dot" style="display:inline-block"></span> ${count('new')} new</span>
+            ${lines.some(l => l.stats) ? '<button class="link-button" onclick="resetProgress()">Reset progress</button>' : ''}`;
+    }
+
+    function resetProgress() {
+        if (!confirm('Reset progress for every line in this production?')) return;
+        productions[currentProdIndex].lines.forEach(l => delete l.stats);
+        syncData(); renderLines();
+    }
+
     function saveProduction() {
         const title = document.getElementById('prod-title').value;
         const role = document.getElementById('prod-role').value;
@@ -545,12 +601,13 @@
         const list = document.getElementById('production-list');
         list.innerHTML = productions.length ? productions.map((p, i) => `
             <div class="production-item" onclick="showEntryView(${i})">
-                <div><strong>${esc(p.title)}</strong><br><small>${esc(p.role)} • ${p.lines.filter(l=>l.type==='line').length} lines</small></div>
+                <div><strong>${esc(p.title)}</strong><br><small>${esc(p.role)} • ${p.lines.filter(l=>l.type==='line').length} lines • ${p.lines.filter(l => lineStatus(l) === 'known').length} known</small></div>
                 <button class="secondary" onclick="event.stopPropagation(); if(confirm('Delete?')){productions.splice(${i},1); syncData(); renderHome();}">Delete</button>
             </div>`).join('') : '<div class="empty-state">No productions.</div>';
     }
 
     function renderLines() {
+        renderProgress();
         const list = document.getElementById('current-lines-list');
         list.innerHTML = `<h3 style="margin-top:10px">Script Structure</h3>`;
         const container = document.createElement('div');
@@ -575,7 +632,7 @@
             if (l.type === 'break') {
                 item.innerHTML = `<div class="handle">⠿</div><div class="line-content break-text" onclick="editItem(${i})">🎬 ${esc(l.text)}</div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
             } else {
-                item.innerHTML = `<div class="handle">⠿</div><div class="line-content" onclick="editItem(${i})" title="Tap to edit"><div class="cue-preview">Cue: "${esc(l.cue || '(you start)')}"</div><div>${esc(l.text)}</div></div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
+                item.innerHTML = `<div class="handle">⠿</div><span class="status-dot ${lineStatus(l)}" title="${lineStatus(l)}"></span><div class="line-content" onclick="editItem(${i})" title="Tap to edit"><div class="cue-preview">Cue: "${esc(l.cue || '(you start)')}"</div><div>${esc(l.text)}</div></div><button class="delete-line" onclick="deleteItem(${i})">×</button>`;
             }
             const handle = item.querySelector('.handle');
             handle.addEventListener('pointerdown', e => startDrag(e, item, container));
@@ -604,6 +661,8 @@
             const text = document.getElementById('edit-text').value.trim();
             if (!text) return;
             l.cue = document.getElementById('edit-cue').value.trim();
+            // A changed line has to be learned again
+            if (text !== l.text) delete l.stats;
             l.text = text;
         }
         editingIndex = null;
@@ -696,29 +755,55 @@
         const allLines = productions[currentProdIndex].lines;
         let lineSet = [];
         if (sceneStart !== null) {
-            lineSet.push(allLines[sceneStart]);
             for (let i = sceneStart + 1; i < allLines.length && allLines[i].type !== 'break'; i++) lineSet.push(allLines[i]);
-        } else lineSet = [...allLines];
+        } else lineSet = allLines.filter(l => l.type === 'line');
 
-        const linesOnly = lineSet.filter(l => l.type === 'line');
-        if (!linesOnly.length) return alert("No lines found.");
-        practiceLines = randomize ? shuffle([...linesOnly]) : [...lineSet];
+        if (!lineSet.length) return alert("No lines found.");
+        beginSession(randomize ? shuffle(lineSet) : lineSet, randomize ? 'random' : 'order', () => startPractice(randomize, sceneStart));
+    }
+
+    function startTricky() {
+        const lines = productions[currentProdIndex].lines.filter(l => l.type === 'line' && lineStatus(l) !== 'known');
+        if (!lines.length) return alert(productions[currentProdIndex].lines.some(l => l.type === 'line') ? "You know all your lines! 🎉" : "No lines found.");
+        beginSession(lines, 'tricky', startTricky);
+    }
+
+    function practiceMissed() {
+        const missed = [...sessionResults].filter(([, got]) => !got).map(([line]) => line);
+        beginSession(missed, 'tricky', sessionStart);
+    }
+
+    function restartSession() { sessionStart(); }
+
+    function beginSession(lines, mode, start) {
+        practiceLines = [...lines];
         practiceIndex = 0;
-        while(practiceIndex < practiceLines.length && practiceLines[practiceIndex].type === 'break') practiceIndex++;
+        sessionMode = mode;
+        sessionStart = start;
+        sessionResults = new Map();
         hideAll();
         document.getElementById('practice-view').classList.remove('hidden');
+        document.getElementById('practice-card').classList.remove('hidden');
+        document.getElementById('practice-nav').classList.remove('hidden');
+        document.getElementById('session-summary').classList.add('hidden');
         document.getElementById('practice-title').innerText = productions[currentProdIndex].title;
         document.getElementById('practice-role').innerText = productions[currentProdIndex].role;
         showCurrentFlashcard();
+    }
+
+    function sceneOf(line) {
+        const lines = productions[currentProdIndex].lines;
+        for (let i = lines.indexOf(line); i >= 0; i--) if (lines[i].type === 'break') return lines[i].text;
+        return '';
     }
 
     function showCurrentFlashcard() {
         stopSpeaking();
         stopListening();
         const current = practiceLines[practiceIndex];
+        card = { hints: 0, grade: null, statsBefore: current.stats && { ...current.stats }, requeued: false };
         const sceneDisplay = document.getElementById('current-scene-display');
-        let currentScene = "";
-        for (let i = 0; i <= practiceIndex; i++) if (practiceLines[i].type === 'break') currentScene = practiceLines[i].text;
+        const currentScene = sceneOf(current);
 
         if (currentScene) { sceneDisplay.innerText = currentScene; sceneDisplay.classList.remove('hidden'); }
         else sceneDisplay.classList.add('hidden');
@@ -728,7 +813,10 @@
         document.getElementById('line-reveal-section').classList.add('hidden');
         document.getElementById('reveal-hint').classList.remove('hidden');
         document.getElementById('heard-text').innerText = '';
+        document.getElementById('hint-text').classList.add('hidden');
+        document.getElementById('hint-btn').innerText = '💡 Hint';
         setCheckResult('', '');
+        showGrade();
 
         if (document.getElementById('autoplay-toggle').checked) speakCue();
     }
@@ -736,19 +824,74 @@
     function revealLine() {
         document.getElementById('line-reveal-section').classList.remove('hidden');
         document.getElementById('reveal-hint').classList.add('hidden');
+        document.getElementById('hint-text').classList.add('hidden');
+    }
+
+    const firstLetters = word => word.replace(/(\p{L})[\p{L}\p{M}'’]*/gu, '$1');
+
+    // Each tap shows a little more: first the first letter of every word, then one more whole word at a time
+    function showHint() {
+        const words = practiceLines[practiceIndex].text.split(/\s+/).filter(Boolean);
+        card.hints++;
+        const whole = card.hints - 1;
+        if (whole >= words.length) return revealLine();
+        const el = document.getElementById('hint-text');
+        el.innerText = words.map((w, i) => i < whole ? w : firstLetters(w)).join(' ');
+        el.classList.remove('hidden');
+        document.getElementById('reveal-hint').classList.add('hidden');
+        document.getElementById('hint-btn').innerText = '💡 More';
+    }
+
+    function showGrade() {
+        document.getElementById('grade-got').classList.toggle('picked-good', card.grade === true);
+        document.getElementById('grade-miss').classList.toggle('picked-miss', card.grade === false);
+    }
+
+    // Records how the line went. Grading the same card again replaces the earlier grade.
+    // Buttons move on to the next card; the 🎤 check grades without moving on.
+    function gradeLine(got, advance = true) {
+        const line = practiceLines[practiceIndex];
+        const s = { right: 0, wrong: 0, streak: 0, ...card.statsBefore };
+        if (got) { s.right++; if (!card.hints) s.streak++; }
+        else { s.wrong++; s.streak = 0; }
+        line.stats = s;
+        card.grade = got;
+        sessionResults.set(line, got);
+        syncData();
+
+        // In shuffled sessions a missed line comes back a few cards later
+        if (!got && sessionMode !== 'order' && !card.requeued) {
+            practiceLines.splice(Math.min(practiceIndex + 4, practiceLines.length), 0, line);
+            card.requeued = true;
+        }
+        showGrade();
+        if (advance) nextLine();
     }
 
     function nextLine() {
-        let i = practiceIndex + 1;
-        while (i < practiceLines.length && practiceLines[i].type === 'break') i++;
-        if (i < practiceLines.length) { practiceIndex = i; showCurrentFlashcard(); }
-        else alert("End of selection.");
+        if (practiceIndex + 1 < practiceLines.length) { practiceIndex++; showCurrentFlashcard(); }
+        else showSummary();
     }
 
     function prevLine() {
-        let i = practiceIndex - 1;
-        while (i >= 0 && practiceLines[i].type === 'break') i--;
-        if (i >= 0) { practiceIndex = i; showCurrentFlashcard(); }
+        if (practiceIndex > 0) { practiceIndex--; showCurrentFlashcard(); }
+    }
+
+    function showSummary() {
+        stopSpeaking();
+        stopListening();
+        const results = [...sessionResults.values()];
+        const got = results.filter(Boolean).length, missed = results.length - got;
+        const lines = productions[currentProdIndex].lines.filter(l => l.type === 'line');
+        const known = lines.filter(l => lineStatus(l) === 'known').length;
+        document.getElementById('summary-text').innerHTML = results.length
+            ? `<p class="check-result good">✓ ${got} got it</p><p class="check-result miss">✗ ${missed} missed</p><p class="hint">${known} of ${lines.length} lines known</p>`
+            : '<p class="hint">Grade your lines with ✓ Got it or ✗ Missed it to track what you know.</p>';
+        document.getElementById('summary-missed-btn').classList.toggle('hidden', !missed);
+        document.getElementById('practice-card').classList.add('hidden');
+        document.getElementById('practice-nav').classList.add('hidden');
+        document.getElementById('current-scene-display').classList.add('hidden');
+        document.getElementById('session-summary').classList.remove('hidden');
     }
 
     function stopSpeaking() {
@@ -901,6 +1044,7 @@
         else if (result.hits / result.total >= 0.8) setCheckResult(`👍 Close! ${missed} word${missed === 1 ? '' : 's'} missed`, 'good');
         else setCheckResult(`Keep at it: ${result.hits} of ${result.total} words`, 'miss');
         revealLine();
+        gradeLine(result.complete, false);
     }
 
     // --- CSV import / export ---
