@@ -1,0 +1,29 @@
+# Cloudflare Worker that turns script pages into a character's cue/line pairs.
+# It holds the Fireworks API key so the static site never sees it.
+#
+# One-time setup (see worker/README.md):
+#   npx wrangler login
+#   npx wrangler secret put FIREWORKS_API_KEY
+#   npx wrangler secret put PASSCODE
+#   npx wrangler deploy
+name = "learn-lines-extract"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# Comma-separated origins allowed to call the Worker
+ALLOWED_ORIGINS = "https://learnlines.net,https://www.learnlines.net,http://localhost:8765"
+# Any Fireworks serverless model that accepts images and structured output
+MODEL = "accounts/fireworks/models/kimi-k2p6"
+# "none" turns off the model's thinking: ~3s per request instead of over a minute
+REASONING_EFFORT = "none"
+FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
+
+# Per-IP request limit, on top of the passcode, so a leaked passcode can't run up the bill
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60

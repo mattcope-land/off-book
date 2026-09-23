@@ -226,6 +226,10 @@
             font-weight: 500;
         }
         .toggle-container input { width: auto; margin: 0; }
+        .review-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+        .review-item textarea { margin: 4px 0 10px 0; }
+        .review-item .review-head { display: flex; justify-content: space-between; align-items: center; }
+        .review-scene { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; margin: 20px 0 8px 0; }
     </style>
 </head>
 <body>
@@ -289,10 +293,39 @@
                 <button class="secondary small" onclick="exportToCSV()">📤 Export CSV</button>
                 <button class="secondary small" onclick="document.getElementById('csv-import-input').click()">📥 Import CSV</button>
                 <input type="file" id="csv-import-input" accept=".csv,text/csv" onchange="importFromCSV(event)">
+                <button class="secondary small ai-only" onclick="showScriptImport()">✨ Import from Script</button>
             </div>
         </div>
 
         <div id="current-lines-list"></div>
+    </div>
+
+    <div id="script-import-view" class="hidden">
+        <h2>Import from Script</h2>
+        <p class="hint" style="margin-bottom: 20px;">Upload the script as a PDF or photos of the pages. AI finds your character's lines and cues, and you check them before they're added.</p>
+        <label>Character Name</label>
+        <input type="text" id="ai-character" placeholder="As written in the script, e.g. PUCK">
+        <label>Other Names in the Script (optional)</label>
+        <input type="text" id="ai-aliases" placeholder="e.g. Robin Goodfellow, Robin">
+        <div class="toggle-container" style="margin: 0 0 20px 0;">
+            <input type="checkbox" id="ai-include-group">
+            <label for="ai-include-group">Include group lines (ALL, CHORUS, ENSEMBLE)</label>
+        </div>
+        <label>Script (PDF, photos, or a text file)</label>
+        <input type="file" id="ai-files" accept=".pdf,application/pdf,image/*,.txt,text/plain" multiple>
+        <label>Passcode</label>
+        <input type="password" id="ai-passcode" autocomplete="off">
+        <button id="ai-extract-btn" onclick="runScriptImport()">Find My Lines</button>
+        <button class="secondary" onclick="showEntryView(currentProdIndex)">Cancel</button>
+        <div id="ai-status" class="heard"></div>
+
+        <div id="ai-review" class="hidden">
+            <h3>Check Your Lines</h3>
+            <p class="hint">AI can make mistakes. Fix anything that's wrong and remove extras, then add them to your script.</p>
+            <div id="ai-results"></div>
+            <button onclick="addExtractedLines()">Add Lines to Script</button>
+            <button class="secondary" onclick="showEntryView(currentProdIndex)">Cancel</button>
+        </div>
     </div>
 
     <div id="practice-view" class="hidden">
@@ -379,6 +412,11 @@
     let currentUtterance = null;
     let recognition = null;
     let lastHeard = '';
+    let extracted = [];
+
+    // Cloudflare Worker that extracts lines from a script (see worker/). Empty hides the feature.
+    const EXTRACT_API = 'https://learn-lines-extract.mmcopeland.workers.dev/extract';
+    const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/';
 
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -396,6 +434,7 @@
         document.getElementById('autoplay-toggle').checked = localStorage.getItem('autoPlayCue') === 'true';
         document.getElementById('listen-after-cue-toggle').checked = localStorage.getItem('listenAfterCue') === 'true';
         if (!SpeechRec) document.querySelectorAll('.speech-only').forEach(el => el.classList.add('hidden'));
+        if (!EXTRACT_API) document.querySelectorAll('.ai-only').forEach(el => el.classList.add('hidden'));
 
         loadVoices();
         if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
@@ -451,7 +490,7 @@
 
     function toggleSettings() { document.getElementById('settings-tray').classList.toggle('hidden'); }
     function hideAll() {
-        ['home-view', 'create-view', 'entry-view', 'practice-view', 'scene-modal'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        ['home-view', 'create-view', 'entry-view', 'script-import-view', 'practice-view', 'scene-modal'].forEach(id => document.getElementById(id).classList.add('hidden'));
         stopSpeaking();
         stopListening();
     }
@@ -922,20 +961,210 @@
             if (col.cue !== -1 && col.line !== -1) rows.shift();
             else col = { cue: 0, line: 1, scene: 2 };
 
-            const lines = productions[currentProdIndex].lines;
-            let scene = '', count = 0;
-            rows.forEach(row => {
-                const rowScene = col.scene !== -1 ? (row[col.scene] || '').trim() : '';
-                if (rowScene && rowScene !== scene) { lines.push({ type: 'break', text: rowScene }); scene = rowScene; }
-                const cue = (row[col.cue] || '').trim();
-                const text = (row[col.line] || '').trim();
-                if (text) { lines.push({ type: 'line', cue, text }); count++; }
-            });
-            syncData(); renderLines();
+            const count = appendRows(rows.map(row => ({
+                scene: col.scene !== -1 ? row[col.scene] : '',
+                cue: row[col.cue],
+                line: row[col.line]
+            })));
             input.value = '';
             alert(`Imported ${count} line${count === 1 ? '' : 's'}.`);
         };
         reader.readAsText(file);
+    }
+
+    // Appends {scene, cue, line} rows to the current production, adding a scene break
+    // wherever the scene changes. Returns the number of lines added.
+    function appendRows(rows) {
+        const lines = productions[currentProdIndex].lines;
+        let scene = '', count = 0;
+        rows.forEach(r => {
+            const rowScene = (r.scene || '').trim();
+            if (rowScene && rowScene !== scene) { lines.push({ type: 'break', text: rowScene }); scene = rowScene; }
+            const cue = (r.cue || '').trim();
+            const text = (r.line || '').trim();
+            if (text) { lines.push({ type: 'line', cue, text }); count++; }
+        });
+        syncData(); renderLines();
+        return count;
+    }
+
+    // --- Import from script (AI) ---
+
+    function showScriptImport() {
+        hideAll();
+        document.getElementById('script-import-view').classList.remove('hidden');
+        document.getElementById('ai-character').value = productions[currentProdIndex].role;
+        document.getElementById('ai-passcode').value = localStorage.getItem('extractPasscode') || '';
+        document.getElementById('ai-status').innerText = '';
+        document.getElementById('ai-review').classList.add('hidden');
+        extracted = [];
+    }
+
+    let pdfjsPromise = null;
+    function loadPdfJs() {
+        pdfjsPromise ??= import(PDFJS + 'pdf.min.mjs').then(pdfjs => {
+            // Browsers won't start a module worker straight from another origin, so wrap it in a same-origin blob
+            const shim = URL.createObjectURL(new Blob([`import "${PDFJS}pdf.worker.min.mjs";`], { type: 'text/javascript' }));
+            pdfjs.GlobalWorkerOptions.workerPort = new Worker(shim, { type: 'module' });
+            return pdfjs;
+        });
+        return pdfjsPromise;
+    }
+
+    function canvasToJpeg(canvas) { return canvas.toDataURL('image/jpeg', 0.8); }
+
+    async function imageFileToDataUrl(file) {
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        return canvasToJpeg(canvas);
+    }
+
+    // Turns the chosen files into pages: text where the PDF has real text, images for scans and photos
+    async function preparePages(files, status) {
+        const pages = [];
+        for (const file of files) {
+            if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+                const pdfjs = await loadPdfJs();
+                const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+                for (let n = 1; n <= doc.numPages; n++) {
+                    status(`Reading ${file.name}: page ${n} of ${doc.numPages}…`);
+                    const page = await doc.getPage(n);
+                    const content = await page.getTextContent();
+                    const text = content.items.map(i => (i.str || '') + (i.hasEOL ? '\n' : '')).join('');
+                    if (text.replace(/\s/g, '').length > 40) { pages.push({ text: `[Page ${n}]\n${text}` }); continue; }
+                    const base = page.getViewport({ scale: 1 });
+                    const viewport = page.getViewport({ scale: 1600 / Math.max(base.width, base.height) });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width; canvas.height = viewport.height;
+                    await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport }).promise;
+                    pages.push({ image: canvasToJpeg(canvas) });
+                }
+            } else if (file.type.startsWith('image/')) {
+                status(`Preparing ${file.name}…`);
+                pages.push({ image: await imageFileToDataUrl(file) });
+            } else {
+                pages.push({ text: await file.text() });
+            }
+        }
+        return pages;
+    }
+
+    // Groups pages into requests small enough for the Worker and the model's output limit
+    function chunkPages(pages) {
+        const chunks = [];
+        let cur = null;
+        for (const p of pages) {
+            const kind = p.text !== undefined ? 'text' : 'image';
+            const size = (p.text || p.image).length;
+            if (!cur || cur.kind !== kind || cur.pages.length >= (kind === 'text' ? 40 : 4) || cur.size + size > (kind === 'text' ? 40000 : 6000000)) {
+                cur = { kind, pages: [], size: 0 };
+                chunks.push(cur);
+            }
+            cur.pages.push(p); cur.size += size;
+        }
+        // Give each text chunk the end of the text before it, so its first cue can be found
+        chunks.forEach((c, i) => {
+            const prev = chunks[i - 1];
+            c.context = prev && prev.kind === 'text' ? prev.pages.map(p => p.text).join('\n').slice(-1500) : '';
+        });
+        return chunks;
+    }
+
+    async function requestLines(chunk, form) {
+        const res = await fetch(EXTRACT_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Passcode': form.passcode },
+            body: JSON.stringify({ ...form.params, context: chunk.context, pages: chunk.pages })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            const err = new Error(data.error || `Request failed (${res.status})`);
+            err.status = res.status;
+            throw err;
+        }
+        return data;
+    }
+
+    async function runScriptImport() {
+        const statusEl = document.getElementById('ai-status');
+        const status = msg => { statusEl.innerText = msg; };
+        const btn = document.getElementById('ai-extract-btn');
+        const files = [...document.getElementById('ai-files').files];
+        const character = document.getElementById('ai-character').value.trim();
+        const passcode = document.getElementById('ai-passcode').value.trim();
+        if (!character) return status('Enter your character name.');
+        if (!files.length) return status('Choose the script file or photos.');
+        if (!passcode) return status('Enter the passcode.');
+
+        const form = {
+            passcode,
+            params: {
+                character,
+                aliases: document.getElementById('ai-aliases').value.split(',').map(s => s.trim()).filter(Boolean),
+                includeGroup: document.getElementById('ai-include-group').checked
+            }
+        };
+
+        btn.disabled = true;
+        document.getElementById('ai-review').classList.add('hidden');
+        try {
+            const chunks = chunkPages(await preparePages(files, status));
+            let done = 0, truncated = false;
+            status(`Finding your lines… (0 of ${chunks.length} sections)`);
+            const results = new Array(chunks.length);
+            // A few requests at a time: faster than one by one, and well under the Worker's rate limit
+            let next = 0;
+            await Promise.all(Array.from({ length: Math.min(3, chunks.length) }, async () => {
+                while (next < chunks.length) {
+                    const i = next++;
+                    const data = await requestLines(chunks[i], form);
+                    results[i] = data.lines;
+                    truncated ||= data.truncated;
+                    status(`Finding your lines… (${++done} of ${chunks.length} sections)`);
+                }
+            }));
+
+            localStorage.setItem('extractPasscode', passcode);
+            // A section that starts mid-scene comes back without a heading; carry the previous one forward
+            let scene = '';
+            extracted = results.flat().map(l => { scene = l.scene || scene; return { ...l, scene }; });
+            if (!extracted.length) return status(`No lines found for ${character}. Check the name matches the script.`);
+            status(`Found ${extracted.length} line${extracted.length === 1 ? '' : 's'}.` + (truncated ? ' Some sections were too long and may be missing lines at the end; try fewer pages at a time.' : ''));
+            renderExtracted();
+        } catch (e) {
+            if (e.status === 401) localStorage.removeItem('extractPasscode');
+            status(e.message || 'Something went wrong. Try again.');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function renderExtracted() {
+        const list = document.getElementById('ai-results');
+        let scene = null;
+        list.innerHTML = extracted.map((l, i) => {
+            const heading = l.scene !== scene ? `<div class="review-scene">🎬 ${esc(l.scene || 'No scene heading')}</div>` : '';
+            scene = l.scene;
+            return `${heading}<div class="review-item">
+                <div class="review-head"><label>The Cue</label><button class="delete-line" onclick="removeExtracted(${i})">×</button></div>
+                <textarea rows="2" oninput="extracted[${i}].cue = this.value">${esc(l.cue)}</textarea>
+                <label>Your Line</label>
+                <textarea rows="3" oninput="extracted[${i}].line = this.value">${esc(l.line)}</textarea>
+            </div>`;
+        }).join('');
+        document.getElementById('ai-review').classList.remove('hidden');
+    }
+
+    function removeExtracted(i) { extracted.splice(i, 1); renderExtracted(); }
+
+    function addExtractedLines() {
+        const count = appendRows(extracted);
+        showEntryView(currentProdIndex);
+        alert(`Added ${count} line${count === 1 ? '' : 's'}.`);
     }
 
     init();
