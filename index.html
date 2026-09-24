@@ -33,7 +33,7 @@
             <div class="empty-emoji">🎭</div>
             <h2>Learn your lines</h2>
             <p>Add your show, then practice with a scene partner that reads your cues and listens to your lines.</p>
-            <p class="muted small">Got a link from your director or a castmate? Just open it.</p>
+            <p class="muted small">Got a link from your director or a castmate? Open it, or paste it under + Add a show.</p>
         </div>
         <button class="btn primary big" onclick="showAdd()">+ Add a show</button>
     </section>
@@ -44,6 +44,10 @@
         <button class="option-card online-only" onclick="showImport()">
             <span class="option-emoji">✨</span>
             <span><strong>From the script</strong><small>Upload a PDF or photos of the pages. Learn Lines finds your lines for you.</small></span>
+        </button>
+        <button class="option-card online-only" onclick="showLinkEntry()">
+            <span class="option-emoji">🔗</span>
+            <span><strong>From a share link</strong><small>Got a link or code from your director or a castmate? Paste it here.</small></span>
         </button>
         <button class="option-card" onclick="showManual(true)">
             <span class="option-emoji">📊</span>
@@ -70,6 +74,16 @@
         </div>
         <button class="btn primary big" onclick="createManual()">Create show</button>
         <div id="manual-status" class="status"></div>
+    </section>
+
+    <!-- New show from a share link pasted in (needed in home-screen apps, which links don't open) -->
+    <section id="view-link" class="view hidden">
+        <header class="topbar"><button class="icon-btn" onclick="showAdd()" aria-label="Back">←</button><h2>From a share link</h2><span class="topbar-spacer"></span></header>
+        <label for="link-input">Share link or code</label>
+        <input type="text" id="link-input" placeholder="https://learnlines.net/#show=… or ABCD-EFGH-IJKL" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="if (event.key === 'Enter') openLinkInput()">
+        <button id="link-paste-btn" class="btn secondary big" onclick="pasteLink()">📋 Paste link</button>
+        <button class="btn primary big" onclick="openLinkInput()">Open show</button>
+        <div id="link-status" class="status"></div>
     </section>
 
     <!-- New show from the script -->

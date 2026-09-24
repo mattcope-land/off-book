@@ -545,6 +545,7 @@ async function shareShow() {
     box.innerHTML = `<strong>Share with your cast</strong>
         <p class="muted small">Anyone with this link can pick their character and start practicing, with natural voices and no passcode. It's also how to move this show to another phone or tablet.</p>
         <code>${esc(url)}</code>
+        <p class="muted small">Or type this code under <strong>+ Add a show → From a share link</strong>: <strong>${formatCode(current.showId)}</strong></p>
         <div class="row-actions" style="margin-top: 8px;">
             <button class="btn primary" onclick="copyShareLink()">Copy link</button>
             ${navigator.share ? '<button class="btn secondary" onclick="nativeShare()">Send…</button>' : ''}
@@ -560,12 +561,51 @@ function nativeShare() {
     navigator.share({ title: current.title, text: `Learn your lines for ${current.title}`, url: shareUrl(current.showId) }).catch(() => {});
 }
 
-// Opens a share link (#show=ID): pick a character, and the show is added
+// Share codes are shown in groups of four for reading aloud or writing down
+const formatCode = id => id.match(/.{1,4}/g).join('-');
+
+// Opens a share link (#show=ID) when the app is opened from one
 async function handleLink() {
     const match = location.hash.match(/^#show=([A-Za-z0-9]{12})$/);
     if (!match) return false;
     history.replaceState(null, '', location.pathname + location.search);
-    const id = match[1];
+    await openShowLink(match[1]);
+    return true;
+}
+
+// A pasted share link, or its code typed in with or without dashes
+function parseShowId(text) {
+    const match = text.match(/#show=([A-Za-z0-9]{12})/) || text.replace(/[\s-]/g, '').match(/^([A-Za-z0-9]{12})$/);
+    return match ? match[1] : null;
+}
+
+// Home-screen apps can't be opened by tapping a link (iPhone and iPad always use Safari), so links can be pasted in
+function showLinkEntry() {
+    showView('view-link');
+    $('link-input').value = '';
+    $('link-status').textContent = '';
+    $('link-status').classList.remove('error');
+    $('link-paste-btn').classList.toggle('hidden', !navigator.clipboard?.readText);
+}
+
+async function pasteLink() {
+    try { $('link-input').value = await navigator.clipboard.readText(); }
+    catch { $('link-status').textContent = 'Press and hold the box, then tap Paste.'; return; }
+    openLinkInput();
+}
+
+function openLinkInput() {
+    const id = parseShowId($('link-input').value);
+    if (!id) {
+        $('link-status').textContent = "That doesn't look like a Learn Lines link or code.";
+        $('link-status').classList.add('error');
+        return;
+    }
+    openShowLink(id);
+}
+
+// Pick a character, and the show is added
+async function openShowLink(id) {
     const existing = productions.find(p => p.showId === id);
     if (existing) { openShow(existing.id); toast('This show is already on your list'); return true; }
 
@@ -580,10 +620,9 @@ async function handleLink() {
         showPick({ mode: 'join', title: show.title, showId: id, script: { entries: show.entries, characters: show.characters } });
     } catch (e) {
         $('join-title').textContent = "Couldn't open the show";
-        $('join-status').textContent = e instanceof TypeError ? "You're offline. Connect to the internet and open the link again." : e.message;
+        $('join-status').textContent = e instanceof TypeError ? "You're offline. Connect to the internet and try again." : e.message;
         $('join-home').classList.remove('hidden');
     }
-    return true;
 }
 
 // --- Edit script ---
@@ -1558,7 +1597,7 @@ function renderInstallBanner() {
     const close = '<button class="banner-close" onclick="dismissInstall()" aria-label="Close">✕</button>';
     el.innerHTML = installPrompt
         ? `<span>📲</span><div class="banner-body"><strong>Install Learn Lines</strong><br>Open it like an app, even offline.</div><button class="btn primary" onclick="installApp()">Install</button>${close}`
-        : `<span>📲</span><div class="banner-body"><strong>Put Learn Lines on your home screen</strong><br>Tap <strong>Share</strong> ⬆︎, then <strong>Add to Home Screen</strong>.${productions.length ? ' Already have shows here? Open each one and use 🔗 Share to move it into the app.' : ''}</div>${close}`;
+        : `<span>📲</span><div class="banner-body"><strong>Put Learn Lines on your home screen</strong><br>Tap <strong>Share</strong> ⬆︎, then <strong>Add to Home Screen</strong>.${productions.length ? ' Already have shows here? Open each one, tap 🔗 Share with cast and copy the link, then paste it into the home-screen app under + Add a show.' : ''}</div>${close}`;
 }
 
 function dismissInstall() { localStorage.setItem('installDismissed', '1'); renderInstallBanner(); }
