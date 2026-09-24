@@ -2,91 +2,200 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Guide | Learn Lines</title>
     <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+    <meta name="theme-color" content="#000000">
     <link rel="stylesheet" href="../styles.css">
     <script>
-        // Match the app's light/dark choice
+        // Same light/dark choice as the app (they share it)
         document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
     </script>
     <style>
-        .guide h2 { font-size: 1.15rem; margin: 36px 0 10px; display: flex; align-items: center; gap: 10px; }
-        .guide h2 span { font-size: 1.4rem; }
-        .guide p, .guide li { color: var(--text); }
-        .guide ul { padding-left: 20px; margin: 8px 0; }
-        .guide li { margin: 8px 0; }
-        .guide .lead { font-size: 1.05rem; color: var(--muted); margin: 0 0 8px; }
-        .guide .tip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin: 14px 0; font-size: 0.95rem; }
+        html { scroll-behavior: smooth; }
+        .guide-wrap { max-width: 1040px; margin: 0 auto; padding: 12px 16px 60px; padding-top: max(12px, env(safe-area-inset-top)); }
+        .guide-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; align-items: start; }
+        .lead { font-size: 1.05rem; color: var(--muted); margin: 0 0 20px; }
+
+        /* Sidebar (wide screens) */
+        .sidebar { position: sticky; top: 20px; }
+        .sidebar-title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px 12px; }
+        .toc { list-style: none; margin: 0; padding: 0; }
+        .toc a {
+            display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-radius: 12px;
+            color: var(--text); text-decoration: none; font-weight: 500; font-size: 0.95rem;
+        }
+        .toc a:hover { background: var(--surface); }
+        .toc a.active { background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); font-weight: 700; }
+
+        /* "On this page" (narrow screens) */
+        .toc-mobile { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+        .toc-mobile summary { cursor: pointer; font-weight: 700; padding: 14px 16px; list-style: none; display: flex; justify-content: space-between; }
+        .toc-mobile summary::-webkit-details-marker { display: none; }
+        .toc-mobile summary::after { content: '▾'; color: var(--muted); }
+        .toc-mobile[open] summary::after { content: '▴'; }
+        .toc-mobile .toc { padding: 0 6px 8px; }
+
+        /* Sections */
+        .guide-section {
+            background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 22px 22px 16px; margin-bottom: 16px; scroll-margin-top: 16px;
+        }
+        .guide-section h2 { font-size: 1.25rem; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
+        .guide-section p, .guide-section li { line-height: 1.6; }
+        .guide-section ul { padding-left: 20px; margin: 8px 0; }
+        .guide-section li { margin: 8px 0; }
+        .tip { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin: 14px 0; font-size: 0.95rem; }
+        .back-to-top { display: inline-block; margin-top: 10px; font-size: 0.85rem; color: var(--muted); text-decoration: none; font-weight: 600; }
+        .back-to-top:hover { color: var(--text); }
+        kbd { font: inherit; font-size: 0.85em; font-weight: 700; background: var(--bg); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; }
+
+        @media (max-width: 800px) {
+            .guide-layout { display: block; }
+            .sidebar { display: none; }
+            .toc-mobile { display: block; }
+            .guide-section { padding: 18px 18px 12px; }
+            .topbar .btn { padding: 8px 14px; font-size: 0.9rem; }
+        }
     </style>
 </head>
 <body>
-<div class="app guide">
+<div class="guide-wrap" id="top">
     <header class="topbar">
         <h1 class="wordmark">LEARN LINES</h1>
-        <a class="btn secondary" href="../">Open the app</a>
+        <div class="topbar-actions">
+            <a class="btn secondary" href="../">Open the app</a>
+            <button id="theme-btn" class="icon-btn" onclick="toggleTheme()" aria-label="Light or dark">☀️</button>
+        </div>
     </header>
-    <p class="lead">Learn your lines with a scene partner that reads your cues out loud and listens to you say your lines.</p>
 
-    <h2><span>🎭</span> Add your show</h2>
-    <p>Tap <strong>+ Add a show</strong> and choose how:</p>
-    <ul>
-        <li><strong>From the script:</strong> upload the script as a PDF or take photos of the pages. Learn Lines reads the whole script, then asks <strong>who you play</strong>. Tick every name your character goes by (like PUCK and ROBIN), plus ALL or CHORUS if you speak or sing with the group. You need the passcode for this, but only once.</li>
-        <li><strong>From a spreadsheet:</strong> a CSV file with <strong>Cue</strong> and <strong>Line</strong> columns, and optionally <strong>Scene</strong>.</li>
-        <li><strong>Type my lines:</strong> enter each cue (the line just before yours) and your line.</li>
-    </ul>
-    <div class="tip">🔗 <strong>Got a link from your director or a castmate?</strong> Just open it, tap your character, and you're ready. No passcode needed.</div>
+    <div class="guide-layout">
+        <nav class="sidebar" aria-label="Guide sections">
+            <p class="sidebar-title">Guide</p>
+            <ul class="toc" id="toc"></ul>
+        </nav>
 
-    <h2><span>▶️</span> Practice</h2>
-    <p>Open your show and tap <strong>Practice</strong>. Pick a scene (or all of them) and how:</p>
-    <ul>
-        <li><strong>In order:</strong> your lines in script order. Best when you're starting out.</li>
-        <li><strong>Shuffle:</strong> mixed up, so you know every line without the one before it.</li>
-        <li><strong>Tricky ones:</strong> only the lines you don't know yet.</li>
-    </ul>
-    <p>On each card you'll see the cue (and the lines before it, for context). Then just follow the big button:</p>
-    <ul>
-        <li><strong>🔊 Hear the cue</strong>, then <strong>🎤 Say my line</strong>. Learn Lines listens, shows your line, and underlines any words you missed.</li>
-        <li><strong>Hands-free</strong> (in ⚙️ Settings, on by default) does it all for you: it plays the cue, listens, and moves on when you get it right. Perfect for running lines while you walk around.</li>
-        <li>No microphone? Say your line out loud, tap <strong>👁 Show</strong>, and tap <strong>✓ Got it</strong> or <strong>✗ Missed it</strong>.</li>
-        <li>Stuck? <strong>💡 Hint</strong> shows the first letter of each word. Tap <strong>More</strong> to reveal one word at a time.</li>
-        <li>If it heard you wrong, tap <strong>I got it</strong> or <strong>Try again</strong> under the button.</li>
-    </ul>
-    <div class="tip">⌨️ On a laptop: <strong>Space</strong> is the big button, <strong>← →</strong> go back and forward, <strong>H</strong> is a hint, <strong>S</strong> shows your line, and <strong>1</strong> / <strong>2</strong> mean missed / got it.</div>
+        <main>
+            <h2 class="show-title">How to use Learn Lines</h2>
+            <p class="lead">Learn your lines with a scene partner that reads your cues out loud and listens to you say your lines.</p>
 
-    <h2><span>📈</span> Getting off book</h2>
-    <ul>
-        <li>Get a line right <strong>3 times in a row without a hint</strong> and it's <strong>known</strong>. Miss it and it goes back to learning.</li>
-        <li>Your show shows how much you're off book, scene by scene. Tap a scene to practice just that one.</li>
-        <li>Lines you miss in <strong>Shuffle</strong> or <strong>Tricky ones</strong> come back a few cards later.</li>
-        <li>Practice every day to build your 🔥 streak. Finish a scene and you'll know about it. 🎉</li>
-    </ul>
+            <details class="toc-mobile">
+                <summary>On this page</summary>
+                <ul class="toc" id="toc-mobile"></ul>
+            </details>
 
-    <h2><span>🗣️</span> Voices</h2>
-    <ul>
-        <li>Cues are read by <strong>natural voices</strong>, with a different voice for each character. They need the internet the first time, then work offline.</li>
-        <li>Choose a different voice or the cue speed in <strong>⚙️ Settings</strong> during practice. The voices built into your device work offline and don't need anything; the best ones are marked ★.</li>
-        <li>On iPhone and iPad you can download better device voices: <strong>Settings → Accessibility → Spoken Content → Voices → English</strong>, then pick one marked <strong>Enhanced</strong> or <strong>Premium</strong>.</li>
-    </ul>
+            <section class="guide-section" id="add">
+                <h2><span>🎭</span> Add your show</h2>
+                <p>Tap <strong>+ Add a show</strong> and choose how:</p>
+                <ul>
+                    <li><strong>From the script:</strong> upload the script as a PDF or take photos of the pages. Learn Lines reads the whole script, then asks <strong>who you play</strong>. Tick every name your character goes by (like PUCK and ROBIN), plus ALL or CHORUS if you speak or sing with the group. You need the passcode for this, but only once.</li>
+                    <li><strong>From a spreadsheet:</strong> a CSV file with <strong>Cue</strong> and <strong>Line</strong> columns, and optionally <strong>Scene</strong>.</li>
+                    <li><strong>Type my lines:</strong> enter each cue (the line just before yours) and your line.</li>
+                </ul>
+                <div class="tip">🔗 <strong>Got a link from your director or a castmate?</strong> Just open it, tap your character, and you're ready. No passcode needed.</div>
+                <a class="back-to-top" href="#top">↑ Back to top</a>
+            </section>
 
-    <h2><span>🔗</span> Share with your cast</h2>
-    <p>Open a show and tap <strong>Share with cast</strong> to get a link. Everyone who opens it picks their own character and gets their own lines, cues and voices. The same link moves the show to your other phone or tablet.</p>
+            <section class="guide-section" id="practice">
+                <h2><span>▶️</span> Practice</h2>
+                <p>Open your show and tap <strong>Practice</strong>. Pick a scene (or all of them) and how:</p>
+                <ul>
+                    <li><strong>In order:</strong> your lines in script order. Best when you're starting out.</li>
+                    <li><strong>Shuffle:</strong> mixed up, so you know every line without the one before it.</li>
+                    <li><strong>Tricky ones:</strong> only the lines you don't know yet.</li>
+                </ul>
+                <p>On each card you'll see the cue, and the lines before it for context. Then just follow the big button:</p>
+                <ul>
+                    <li><strong>🔊 Hear the cue</strong>, then <strong>🎤 Say my line</strong>. Learn Lines listens, shows your line, and underlines any words you missed.</li>
+                    <li><strong>Hands-free</strong> (in ⚙️ Settings, on by default) does it all for you: it plays the cue, listens, and moves on when you get it right. Perfect for running lines while you walk around.</li>
+                    <li>No microphone? Say your line out loud, tap <strong>👁 Show</strong>, then tap <strong>✓ Got it</strong> or <strong>✗ Missed it</strong>.</li>
+                    <li>Stuck? <strong>💡 Hint</strong> shows the first letter of each word. Tap <strong>More</strong> to reveal one word at a time.</li>
+                    <li>If it heard you wrong, tap <strong>I got it</strong> or <strong>Try again</strong> under the button.</li>
+                </ul>
+                <div class="tip">⌨️ On a laptop: <kbd>Space</kbd> is the big button, <kbd>←</kbd> <kbd>→</kbd> go back and forward, <kbd>H</kbd> is a hint, <kbd>S</kbd> shows your line, and <kbd>1</kbd> / <kbd>2</kbd> mean missed / got it.</div>
+                <a class="back-to-top" href="#top">↑ Back to top</a>
+            </section>
 
-    <h2><span>📲</span> Put it on your home screen</h2>
-    <ul>
-        <li><strong>iPhone / iPad (Safari):</strong> tap <strong>Share</strong> ⬆︎, then <strong>Add to Home Screen</strong>.</li>
-        <li><strong>Android (Chrome):</strong> tap <strong>Install</strong> when Learn Lines offers it, or <strong>⋮ → Install app</strong>.</li>
-        <li><strong>Computer (Chrome / Edge):</strong> click the install icon at the end of the address bar.</li>
-    </ul>
-    <div class="tip">On iPhone and iPad, the home-screen app keeps its own separate copy of your shows. Open each show in Safari, tap <strong>Share with cast</strong>, and open that link in the home-screen app to move it over.</div>
+            <section class="guide-section" id="progress">
+                <h2><span>📈</span> Getting off book</h2>
+                <ul>
+                    <li>Get a line right <strong>3 times in a row without a hint</strong> and it's <strong>known</strong>. Miss it and it goes back to learning.</li>
+                    <li>Your show shows how much you're off book, scene by scene. Tap a scene to practice just that one.</li>
+                    <li>Lines you miss in <strong>Shuffle</strong> or <strong>Tricky ones</strong> come back a few cards later.</li>
+                    <li>Practice every day to build your 🔥 streak. Finish a scene and you'll know about it. 🎉</li>
+                </ul>
+                <a class="back-to-top" href="#top">↑ Back to top</a>
+            </section>
 
-    <h2><span>🔒</span> Your data</h2>
-    <ul>
-        <li>Your shows and progress are saved <strong>on this device</strong>. There are no accounts.</li>
-        <li>Clearing your browser's data deletes them, so keep your share link, or use <strong>Edit script → Export CSV</strong> for a backup.</li>
-        <li>Importing a script sends it to an AI service (Fireworks AI) to find the lines. Sharing stores the script so your cast's links work. Natural voices send the cue text to Cloudflare to be read aloud.</li>
-        <li>🎤 checking uses your browser's speech recognition, which may send your voice to Apple or Google to be transcribed. Learn Lines doesn't record or keep it.</li>
-    </ul>
+            <section class="guide-section" id="voices">
+                <h2><span>🗣️</span> Voices</h2>
+                <ul>
+                    <li>Cues are read by <strong>natural voices</strong>, with a different voice for each character. They need the internet the first time, then work offline.</li>
+                    <li>Choose a different voice or the cue speed in <strong>⚙️ Settings</strong> during practice. The voices built into your device work offline and don't need anything; the best ones are marked ★.</li>
+                    <li>On iPhone and iPad you can download better device voices: <strong>Settings → Accessibility → Spoken Content → Voices → English</strong>, then pick one marked <strong>Enhanced</strong> or <strong>Premium</strong>.</li>
+                </ul>
+                <a class="back-to-top" href="#top">↑ Back to top</a>
+            </section>
+
+            <section class="guide-section" id="share">
+                <h2><span>🔗</span> Share with your cast</h2>
+                <p>Open a show and tap <strong>Share with cast</strong> to get a link. Everyone who opens it picks their own character and gets their own lines, cues and voices. The same link moves the show to your other phone or tablet.</p>
+                <a class="back-to-top" href="#top">↑ Back to top</a>
+            </section>
+
+            <section class="guide-section" id="install">
+                <h2><span>📲</span> Put it on your home screen</h2>
+                <ul>
+                    <li><strong>iPhone / iPad (Safari):</strong> tap <strong>Share</strong> ⬆︎, then <strong>Add to Home Screen</strong>.</li>
+                    <li><strong>Android (Chrome):</strong> tap <strong>Install</strong> when Learn Lines offers it, or <strong>⋮ → Install app</strong>.</li>
+                    <li><strong>Computer (Chrome / Edge):</strong> click the install icon at the end of the address bar.</li>
+                </ul>
+                <div class="tip">On iPhone and iPad, the home-screen app keeps its own separate copy of your shows. Open each show in Safari, tap <strong>Share with cast</strong>, and open that link in the home-screen app to move it over.</div>
+                <a class="back-to-top" href="#top">↑ Back to top</a>
+            </section>
+
+            <section class="guide-section" id="data">
+                <h2><span>🔒</span> Your data</h2>
+                <ul>
+                    <li>Your shows and progress are saved <strong>on this device</strong>. There are no accounts.</li>
+                    <li>Clearing your browser's data deletes them, so keep your share link, or use <strong>Edit script → Export CSV</strong> for a backup.</li>
+                    <li>Importing a script sends it to an AI service (Fireworks AI) to find the lines. Sharing stores the script so your cast's links work. Natural voices send the cue text to Cloudflare to be read aloud.</li>
+                    <li>🎤 checking uses your browser's speech recognition, which may send your voice to Apple or Google to be transcribed. Learn Lines doesn't record or keep it.</li>
+                </ul>
+                <a class="back-to-top" href="#top">↑ Back to top</a>
+            </section>
+        </main>
+    </div>
 </div>
+
+<script>
+    // Build both contents lists from the sections, so they can't drift apart
+    const sections = [...document.querySelectorAll('.guide-section')];
+    const tocHtml = sections.map(s => {
+        const h = s.querySelector('h2');
+        return `<li><a href="#${s.id}" data-section="${s.id}"><span>${h.querySelector('span').textContent}</span>${h.textContent.replace(h.querySelector('span').textContent, '').trim()}</a></li>`;
+    }).join('');
+    document.getElementById('toc').innerHTML = tocHtml;
+    document.getElementById('toc-mobile').innerHTML = tocHtml;
+    document.querySelectorAll('#toc-mobile a').forEach(a => a.addEventListener('click', () => a.closest('details').open = false));
+
+    // Highlight the section being read
+    const links = [...document.querySelectorAll('#toc a')];
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) links.forEach(a => a.classList.toggle('active', a.dataset.section === e.target.id));
+        });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    sections.forEach(s => observer.observe(s));
+
+    function updateThemeIcon(theme) { document.getElementById('theme-btn').textContent = theme === 'dark' ? '🌙' : '☀️'; }
+    function toggleTheme() {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateThemeIcon(next);
+    }
+    updateThemeIcon(document.documentElement.getAttribute('data-theme'));
+</script>
 </body>
 </html>
